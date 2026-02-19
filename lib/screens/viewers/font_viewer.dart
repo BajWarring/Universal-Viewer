@@ -22,15 +22,7 @@ class _FontViewerState extends State<FontViewer> {
   }
 
   Future<void> _loadFont() async {
-    try {
-      final fontData = await File(widget.filePath).readAsBytes();
-      final fontLoader = FontLoader('PreviewFont_${DateTime.now().millisecondsSinceEpoch}');
-      fontLoader.addFont(Future.value(ByteData.view(fontData.buffer)));
-      await fontLoader.load();
-      if (mounted) setState(() { _fontFamily = fontLoader.family; _loading = false; });
-    } catch (_) {
-      if (mounted) setState(() { _loading = false; });
-    }
+   if (mounted) setState(() { _loading = false; });
   }
 
   @override
