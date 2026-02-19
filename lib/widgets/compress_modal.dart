@@ -85,7 +85,7 @@ class _CompressModalState extends State<CompressModal> {
                     children: [
                       _label('Format'),
                       const SizedBox(height: 6),
-                      _dropdown([''.zip', '.7z', '.tar'], _format, (v) {
+                      _dropdown(['.zip', '.7z', '.tar'], _format, (v) {
                         setState(() => _format = v!);
                         final base = _nameCtrl.text.contains('.')
                             ? _nameCtrl.text.substring(0, _nameCtrl.text.lastIndexOf('.'))
