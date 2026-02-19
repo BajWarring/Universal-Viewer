@@ -20,20 +20,20 @@ jobs:
 
       - name: Create Flutter App
         run: |
-          # Create app with specific package (com.universal.viewer)
+          # Create app with specific package (com.sage.tools)
           # Note: Project name in dart cannot have dots, so we use 'sage_tools' internally
-          flutter create --org com.universal --project-name Viewer .
+          flutter create --org com.sage --project-name sage_tools .
           
           # Remove the default test file to avoid build errors in empty setup
           rm -rf test/widget_test.dart
 
-      - name: Configure App Name (Universal Viewer)
+      - name: Configure App Name (Sage Tools)
         run: |
           # Use sed to replace the label in AndroidManifest to "Sage Tools"
-          sed -i 's/android:label="Universal_Viewer"/android:label="Universal Viewer"/g' android/app/src/main/AndroidManifest.xml
+          sed -i 's/android:label="sage_tools"/android:label="Sage Tools"/g' android/app/src/main/AndroidManifest.xml
           
           # Update the description in pubspec.yaml
-          sed -i 's/description: A new Flutter project./description: Universal Viewer- View Almost All Formats/g' pubspec.yaml
+          sed -i 's/description: A new Flutter project./description: Sage Tools - Personal Accounting/g' pubspec.yaml
 
       - name: Commit and Push Changes
         run: |
