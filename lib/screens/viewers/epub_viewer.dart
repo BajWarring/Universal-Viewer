@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:epub_view/epub_view.dart';
+import 'dart:io';
 
 class EpubViewer extends StatefulWidget {
   final String filePath;
@@ -16,7 +17,7 @@ class _EpubViewerState extends State<EpubViewer> {
   void initState() {
     super.initState();
     _controller = EpubController(
-      document: EpubDocument.openFile(widget.filePath),
+      document: EpubDocument.openFile(File(widget.filePath)),
     );
   }
 
