@@ -1,4 +1,4 @@
-package com.sage.sage_tools
+package com.omni.viewer
 
 import io.flutter.embedding.android.FlutterActivity
 
