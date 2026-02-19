@@ -1,63 +1,89 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'screens/home_screen.dart';
+import 'package:provider/provider.dart';
+import 'models/app_settings.dart';
+import 'utils/app_theme.dart';
+import 'screens/main_shell.dart';
+import 'screens/permission_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Color(0xFF0D0D14),
-      systemNavigationBarIconBrightness: Brightness.light,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.transparent,
     ),
   );
-  runApp(const OmniViewApp());
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
+  final settings = AppSettings();
+  await settings.load();
+
+  runApp(
+    ChangeNotifierProvider.value(
+      value: settings,
+      child: const OmniApp(),
+    ),
+  );
 }
 
-class OmniViewApp extends StatelessWidget {
-  const OmniViewApp({super.key});
+class OmniApp extends StatelessWidget {
+  const OmniApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'OmniView',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0D0D14),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6C63FF),
-          brightness: Brightness.dark,
-          background: const Color(0xFF0D0D14),
-          surface: const Color(0xFF14141F),
-          primary: const Color(0xFF6C63FF),
-          secondary: const Color(0xFF00E5FF),
-          tertiary: const Color(0xFFFF6B9D),
-        ),
-        fontFamily: 'Roboto',
-        cardTheme: CardThemeData(
-          color: const Color(0xFF14141F),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: Color(0xFF1E1E30), width: 1),
-          ),
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF0D0D14),
-          elevation: 0,
-          titleTextStyle: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.5,
-          ),
-          iconTheme: IconThemeData(color: Colors.white),
-        ),
-      ),
-      home: const HomeScreen(),
+    return Consumer<AppSettings>(
+      builder: (context, settings, _) {
+        final primaryColor = AppTheme.getPrimaryColor(settings.theme);
+        final isDark = settings.darkMode;
+        final isPureBlack = settings.theme == 'Pure Black';
+
+        return MaterialApp(
+          title: 'Omni File Manager',
+          debugShowCheckedModeBanner: false,
+          themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
+          theme: AppTheme.lightTheme(primaryColor),
+          darkTheme: AppTheme.darkTheme(primaryColor, isPureBlack: isPureBlack),
+          home: const _AppRoot(),
+        );
+      },
     );
+  }
+}
+
+class _AppRoot extends StatefulWidget {
+  const _AppRoot();
+  @override
+  State<_AppRoot> createState() => _AppRootState();
+}
+
+class _AppRootState extends State<_AppRoot> {
+  bool _hasPermission = false;
+  bool _checking = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPermission();
+  }
+
+  Future<void> _checkPermission() async {
+    final granted = await PermissionService.hasStoragePermission();
+    if (mounted) setState(() { _hasPermission = granted; _checking = false; });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_checking) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (!_hasPermission) {
+      return PermissionScreen(
+        onGranted: () => setState(() => _hasPermission = true),
+      );
+    }
+    return const MainShell();
   }
 }

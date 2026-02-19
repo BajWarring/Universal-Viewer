@@ -1,11 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../utils/format_registry.dart';
-import '../widgets/category_card.dart';
-import '../widgets/format_search_delegate.dart';
-import 'viewer_screen.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../models/app_settings.dart';
+import '../utils/app_theme.dart';
+import '../utils/file_system_service.dart';
+import '../utils/storage_service.dart';
+import 'files_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,66 +17,68 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedCategoryIndex = -1;
+  List<StorageInfo> _storageDevices = [];
+  List<FileItem> _recentFiles = [];
+  bool _loadingStorage = true;
+  bool _loadingRecent = true;
 
-  final List<_CategoryInfo> _categories = [
-    _CategoryInfo('Documents', FormatCategory.documents, Icons.description_outlined, Color(0xFF6C63FF), '29 formats'),
-    _CategoryInfo('Images', FormatCategory.images, Icons.image_outlined, Color(0xFF00E5FF), '21 formats'),
-    _CategoryInfo('Video', FormatCategory.video, Icons.videocam_outlined, Color(0xFFFF6B9D), '15 formats'),
-    _CategoryInfo('Archives', FormatCategory.archives, Icons.folder_zip_outlined, Color(0xFFF7B731), '12 formats'),
-    _CategoryInfo('Code', FormatCategory.code, Icons.code, Color(0xFF26DE81), '24 formats'),
-    _CategoryInfo('Database', FormatCategory.database, Icons.storage_outlined, Color(0xFFFD9644), '11 formats'),
-    _CategoryInfo('Fonts', FormatCategory.fonts, Icons.text_fields_outlined, Color(0xFFA29BFE), '9 formats'),
+  final List<_PinnedFolder> _pinnedFolders = [
+    _PinnedFolder('Camera', Icons.camera_alt_rounded, '/storage/emulated/0/DCIM/Camera'),
+    _PinnedFolder('Downloads', Icons.download_rounded, '/storage/emulated/0/Download'),
+    _PinnedFolder('WhatsApp', Icons.chat_rounded, '/storage/emulated/0/WhatsApp'),
+    _PinnedFolder('Documents', Icons.description_rounded, '/storage/emulated/0/Documents'),
+    _PinnedFolder('Music', Icons.music_note_rounded, '/storage/emulated/0/Music'),
+    _PinnedFolder('Screenshots', Icons.screenshot_rounded, '/storage/emulated/0/Pictures/Screenshots'),
   ];
 
-  Future<void> _pickFile() async {
-    final result = await FilePicker.platform.pickFiles(
-      allowMultiple: false,
-      type: FileType.any,
-    );
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
 
-    if (result != null && result.files.isNotEmpty && mounted) {
-      final file = result.files.first;
-      final ext = file.extension ?? '';
-      final format = FormatRegistry.byExt(ext);
+  Future<void> _loadData() async {
+    await _loadStorage();
+    await _loadRecent();
+  }
 
-      if (!mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ViewerScreen(
-            filePath: file.path!,
-            fileName: file.name,
-            fileSize: file.size,
-            format: format,
-          ),
-        ),
-      );
+  Future<void> _loadStorage() async {
+    final devices = await StorageService.getStorageDevices();
+    if (mounted) setState(() { _storageDevices = devices; _loadingStorage = false; });
+  }
+
+  Future<void> _loadRecent() async {
+    try {
+      final files = await FileSystemService.getRecentFiles('/storage/emulated/0', limit: 10);
+      if (mounted) setState(() { _recentFiles = files; _loadingRecent = false; });
+    } catch (_) {
+      if (mounted) setState(() { _loadingRecent = false; });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<AppSettings>();
+    final primaryColor = AppTheme.getPrimaryColor(settings.theme);
+    final isDark = settings.darkMode;
+
     return Scaffold(
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          _buildAppBar(),
-          SliverPadding(
-            padding: const EdgeInsets.all(16),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                _buildOpenFileButton(),
-                const SizedBox(height: 28),
-                _buildSectionTitle('Browse by Category'),
-                const SizedBox(height: 12),
-                _buildCategoryGrid(),
-                const SizedBox(height: 28),
-                _buildSectionTitle('All Formats'),
-                const SizedBox(height: 12),
-                _buildAllFormatsGrid(),
+          _buildAppBar(context, primaryColor),
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 8),
+                _buildPinnedFolders(context, primaryColor, isDark),
+                const SizedBox(height: 8),
+                _buildStorageSection(context, primaryColor, isDark),
+                const SizedBox(height: 8),
+                _buildRecentFiles(context, primaryColor, isDark),
                 const SizedBox(height: 100),
-              ]),
+              ],
             ),
           ),
         ],
@@ -82,366 +86,529 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildAppBar() {
+  Widget _buildAppBar(BuildContext context, Color primaryColor) {
     return SliverAppBar(
       pinned: true,
-      expandedHeight: 120,
+      floating: true,
+      expandedHeight: 110,
       flexibleSpace: FlexibleSpaceBar(
         titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
-        title: ShaderMask(
-          shaderCallback: (bounds) => const LinearGradient(
-            colors: [Color(0xFF6C63FF), Color(0xFF00E5FF)],
-          ).createShader(bounds),
-          child: const Text(
-            'OmniView',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-              letterSpacing: -1,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Text(
+              'Omni',
+              style: GoogleFonts.inter(
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+              ),
             ),
-          ),
-        ),
-        background: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF0D0D14), Color(0xFF0D0D14)],
+            Text(
+              'File Manager',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              ),
             ),
-          ),
+          ],
         ),
       ),
       actions: [
         IconButton(
           icon: const Icon(Icons.search_rounded),
-          onPressed: () => showSearch(
-            context: context,
-            delegate: FormatSearchDelegate(),
-          ),
+          onPressed: () => _showSearch(context, primaryColor),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 4),
       ],
     );
   }
 
-  Widget _buildOpenFileButton() {
-    return GestureDetector(
-      onTap: _pickFile,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              const Color(0xFF6C63FF).withOpacity(0.2),
-              const Color(0xFF00E5FF).withOpacity(0.1),
+  void _showSearch(BuildContext context, Color primaryColor) {
+    showSearch(
+      context: context,
+      delegate: _FileSearchDelegate(primaryColor: primaryColor),
+    );
+  }
+
+  Widget _buildPinnedFolders(BuildContext context, Color primaryColor, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 16, 10),
+          child: Row(
+            children: [
+              Text(
+                'PINNED FOLDERS',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.5,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: Icon(Icons.tune_rounded, size: 18, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
+                onPressed: () {},
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                padding: EdgeInsets.zero,
+              ),
             ],
           ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: const Color(0xFF6C63FF).withOpacity(0.4),
-            width: 1.5,
+        ),
+        SizedBox(
+          height: 108,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: _pinnedFolders.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (context, i) {
+              final folder = _pinnedFolders[i];
+              return _PinnedFolderCard(
+                folder: folder,
+                primaryColor: primaryColor,
+                isDark: isDark,
+                onTap: () => _navigateToFolder(context, folder.path, folder.name),
+              ).animate(delay: Duration(milliseconds: i * 60))
+               .fadeIn(duration: 300.ms)
+               .slideX(begin: 0.2, end: 0);
+            },
           ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: const Color(0xFF6C63FF).withOpacity(0.2),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Icon(Icons.folder_open_rounded, color: Color(0xFF6C63FF), size: 28),
+      ],
+    );
+  }
+
+  void _navigateToFolder(BuildContext context, String path, String name) {
+    // Navigate to files tab with this path
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => FolderViewScreen(path: path, title: name),
+    ));
+  }
+
+  Widget _buildStorageSection(BuildContext context, Color primaryColor, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
+          child: Text(
+            'STORAGE DEVICES',
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.5,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
             ),
-            const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Open Any File', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white)),
-                Text('120+ formats supported', style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.5))),
-              ],
-            ),
-            const Spacer(),
-            Icon(Icons.arrow_forward_ios_rounded, color: const Color(0xFF6C63FF).withOpacity(0.7), size: 18),
-          ],
+          ),
         ),
-      ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.2, end: 0),
+        if (_loadingStorage)
+          const Padding(
+            padding: EdgeInsets.all(20),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else
+          SizedBox(
+            height: 128,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _storageDevices.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemBuilder: (context, i) {
+                final device = _storageDevices[i];
+                return _StorageCard(
+                  device: device,
+                  primaryColor: primaryColor,
+                  isDark: isDark,
+                  onTap: () => _navigateToFolder(context, device.path, device.label),
+                ).animate(delay: Duration(milliseconds: i * 80))
+                 .fadeIn(duration: 400.ms)
+                 .slideY(begin: 0.2, end: 0);
+              },
+            ),
+          ),
+      ],
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
-        color: Colors.white.withOpacity(0.4),
-        letterSpacing: 1.5,
-      ),
-    );
-  }
-
-  Widget _buildCategoryGrid() {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1.5,
-      ),
-      itemCount: _categories.length,
-      itemBuilder: (ctx, i) => CategoryCard(
-        info: _categories[i],
-        delay: i * 60,
-        onTap: () => _showCategorySheet(_categories[i]),
-      ),
-    );
-  }
-
-  Widget _buildAllFormatsGrid() {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: FormatRegistry.all
-          .asMap()
-          .entries
-          .map((e) => _FormatChip(format: e.value, delay: e.key * 10))
-          .toList(),
-    );
-  }
-
-  void _showCategorySheet(_CategoryInfo info) {
-    final formats = FormatRegistry.byCategory(info.category);
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _CategorySheet(info: info, formats: formats, onFilePick: _pickFile),
+  Widget _buildRecentFiles(BuildContext context, Color primaryColor, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 16, 10),
+          child: Row(
+            children: [
+              Text(
+                'RECENT FILES',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.5,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                ),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: () {},
+                child: Text('View all', style: TextStyle(color: primaryColor, fontSize: 13, fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        ),
+        if (_loadingRecent)
+          const Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator()))
+        else if (_recentFiles.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Center(
+              child: Text(
+                'No recent files',
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
+              ),
+            ),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: _recentFiles.take(5).toList().asMap().entries.map((e) {
+                return _RecentFileCard(
+                  item: e.value,
+                  primaryColor: primaryColor,
+                  isDark: isDark,
+                ).animate(delay: Duration(milliseconds: e.key * 50))
+                 .fadeIn(duration: 300.ms)
+                 .slideY(begin: 0.1, end: 0);
+              }).toList(),
+            ),
+          ),
+      ],
     );
   }
 }
 
-class _CategoryInfo {
+class _PinnedFolder {
   final String name;
-  final FormatCategory category;
   final IconData icon;
-  final Color color;
-  final String count;
-  _CategoryInfo(this.name, this.category, this.icon, this.color, this.count);
+  final String path;
+  _PinnedFolder(this.name, this.icon, this.path);
 }
 
-class _FormatChip extends StatelessWidget {
-  final FileFormat format;
-  final int delay;
-  const _FormatChip({required this.format, required this.delay});
+class _PinnedFolderCard extends StatelessWidget {
+  final _PinnedFolder folder;
+  final Color primaryColor;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _PinnedFolderCard({
+    required this.folder,
+    required this.primaryColor,
+    required this.isDark,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => FormatInfoScreen(format: format),
-        ),
-      ),
+      onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        width: 110,
+        height: 100,
         decoration: BoxDecoration(
-          color: format.color.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: format.color.withOpacity(0.25), width: 1),
-        ),
-        child: Text(
-          '.${format.ext}',
-          style: TextStyle(
-            color: format.color,
-            fontFamily: 'monospace',
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
+          color: isDark
+              ? Colors.white.withOpacity(0.04)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? Colors.white.withOpacity(0.07) : const Color(0xFFE2E8F0),
           ),
+          boxShadow: isDark ? [] : [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
-      ).animate(delay: Duration(milliseconds: delay)).fadeIn(duration: 300.ms),
-    );
-  }
-}
-
-class _CategorySheet extends StatelessWidget {
-  final _CategoryInfo info;
-  final List<FileFormat> formats;
-  final VoidCallback onFilePick;
-  const _CategorySheet({required this.info, required this.formats, required this.onFilePick});
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.6,
-      maxChildSize: 0.95,
-      minChildSize: 0.4,
-      builder: (_, ctrl) => Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF14141F),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          border: Border(top: BorderSide(color: Color(0xFF1E1E30), width: 1)),
-        ),
-        child: Column(
-          children: [
-            const SizedBox(height: 8),
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Icon(folder.icon, color: primaryColor, size: 28),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(info.icon, color: info.color, size: 24),
-                  const SizedBox(width: 10),
-                  Text(info.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: info.color.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20),
+                  Text(
+                    folder.name,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
-                    child: Text(info.count, style: TextStyle(color: info.color, fontSize: 12, fontWeight: FontWeight.w700)),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView.builder(
-                controller: ctrl,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: formats.length,
-                itemBuilder: (_, i) => _FormatListTile(format: formats[i]),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _FormatListTile extends StatelessWidget {
-  final FileFormat format;
-  const _FormatListTile({required this.format});
+class _StorageCard extends StatelessWidget {
+  final StorageInfo device;
+  final Color primaryColor;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _StorageCard({
+    required this.device,
+    required this.primaryColor,
+    required this.isDark,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => FormatInfoScreen(format: format))),
+      onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        width: 150,
         decoration: BoxDecoration(
-          color: const Color(0xFF0D0D14),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFF1E1E30), width: 1),
+          color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? Colors.white.withOpacity(0.07) : const Color(0xFFE2E8F0),
+          ),
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: format.color.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Center(
-                child: Text(
-                  '.${format.ext.toUpperCase()}',
-                  style: TextStyle(color: format.color, fontFamily: 'monospace', fontSize: 10, fontWeight: FontWeight.w800),
-                  textAlign: TextAlign.center,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Circular progress
+              SizedBox(
+                width: 52,
+                height: 52,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    CircularProgressIndicator(
+                      value: device.usedPercent,
+                      backgroundColor: isDark ? Colors.white.withOpacity(0.1) : const Color(0xFFE2E8F0),
+                      color: primaryColor,
+                      strokeWidth: 3,
+                    ),
+                    Icon(
+                      device.isRemovable ? Icons.sd_card_rounded : Icons.smartphone_rounded,
+                      color: primaryColor,
+                      size: 20,
+                    ),
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(format.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                  const SizedBox(height: 2),
-                  Text(format.description, style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.4))),
-                ],
+              const SizedBox(height: 8),
+              Text(
+                device.label,
+                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700),
               ),
-            ),
-            Icon(Icons.chevron_right_rounded, color: Colors.white.withOpacity(0.3)),
-          ],
+              const SizedBox(height: 2),
+              Text(
+                '${device.usedFormatted} / ${device.totalFormatted}',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class FormatInfoScreen extends StatelessWidget {
-  final FileFormat format;
-  const FormatInfoScreen({super.key, required this.format});
+class _RecentFileCard extends StatelessWidget {
+  final FileItem item;
+  final Color primaryColor;
+  final bool isDark;
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('.${format.ext.toUpperCase()} — ${format.name}')),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: format.color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: format.color.withOpacity(0.3), width: 1),
-              ),
-              child: Column(
-                children: [
-                  Icon(format.icon, color: format.color, size: 56),
-                  const SizedBox(height: 12),
-                  Text('.${format.ext.toUpperCase()}', style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: format.color, fontFamily: 'monospace')),
-                  const SizedBox(height: 8),
-                  Text(format.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 4),
-                  Text(format.description, style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.5)), textAlign: TextAlign.center),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            _InfoRow(label: 'Category', value: format.category.name.toUpperCase()),
-            _InfoRow(label: 'Viewer', value: format.viewer.name.toUpperCase()),
-          ],
-        ),
-      ),
-    );
-  }
-}
+  const _RecentFileCard({
+    required this.item,
+    required this.primaryColor,
+    required this.isDark,
+  });
 
-class _InfoRow extends StatelessWidget {
-  final String label, value;
-  const _InfoRow({required this.label, required this.value});
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      height: 76,
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF14141F),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF1E1E30)),
+        color: isDark ? Colors.white.withOpacity(0.04) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.07) : const Color(0xFFE2E8F0),
+        ),
       ),
-      child: Row(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () {},
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: item.getColor(primaryColor).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(item.icon, color: item.getColor(primaryColor), size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        item.name,
+                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${FileSystemService.formatDate(item.modified)} • ${FileSystemService.formatSize(item.size)}',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Row(
+                        children: [
+                          Icon(Icons.folder_outlined, size: 10, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.35)),
+                          const SizedBox(width: 3),
+                          Expanded(
+                            child: Text(
+                              item.path.replaceFirst('/storage/emulated/0', '/Internal'),
+                              style: GoogleFonts.inter(
+                                fontSize: 9,
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.35),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Search Delegate
+class _FileSearchDelegate extends SearchDelegate<FileItem?> {
+  final Color primaryColor;
+  List<FileItem> _results = [];
+  bool _searching = false;
+
+  _FileSearchDelegate({required this.primaryColor});
+
+  @override
+  String get searchFieldLabel => 'Search files...';
+
+  @override
+  List<Widget> buildActions(BuildContext context) => [
+    if (query.isNotEmpty)
+      IconButton(icon: const Icon(Icons.clear), onPressed: () => query = ''),
+  ];
+
+  @override
+  Widget buildLeading(BuildContext context) =>
+      IconButton(icon: const Icon(Icons.arrow_back_rounded), onPressed: () => close(context, null));
+
+  @override
+  Widget buildResults(BuildContext context) => _buildResultsList(context);
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    if (query.length >= 2) return _buildResultsList(context);
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(label, style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.4), fontWeight: FontWeight.w600)),
-          const Spacer(),
-          Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, fontFamily: 'monospace')),
+          Icon(Icons.search_rounded, size: 64, color: Colors.grey.withOpacity(0.4)),
+          const SizedBox(height: 16),
+          const Text('Type to search files', style: TextStyle(color: Colors.grey)),
         ],
       ),
+    );
+  }
+
+  Widget _buildResultsList(BuildContext context) {
+    if (query.length < 2) return const SizedBox();
+    return FutureBuilder<List<FileItem>>(
+      future: FileSystemService.searchFiles('/storage/emulated/0', query),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final results = snapshot.data ?? [];
+        if (results.isEmpty) {
+          return Center(
+            child: Text('No results for "$query"', style: const TextStyle(color: Colors.grey)),
+          );
+        }
+        return ListView.builder(
+          itemCount: results.length,
+          itemBuilder: (context, i) {
+            final item = results[i];
+            return ListTile(
+              leading: Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(
+                  color: item.getColor(primaryColor).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(item.icon, color: item.getColor(primaryColor), size: 20),
+              ),
+              title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+              subtitle: Text(item.path, style: const TextStyle(fontSize: 10), overflow: TextOverflow.ellipsis),
+              trailing: Text(
+                FileSystemService.formatSize(item.size),
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+              ),
+              onTap: () => close(context, item),
+            );
+          },
+        );
+      },
     );
   }
 }

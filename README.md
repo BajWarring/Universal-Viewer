@@ -1,104 +1,105 @@
-# OmniView — Universal File Viewer for Android
+# Omni File Manager
 
-A Flutter app that opens and views 120+ file formats.
+A fully functional Flutter file manager for Android, matching the HTML UI design exactly.
 
-## ✅ What Actually Works
+## Features
 
-| Format Type | Viewer | Status |
-|---|---|---|
-| JPG, PNG, GIF, BMP, WEBP, AVIF, ICO | `photo_view` pinch-zoom | ✅ Full |
-| SVG | `flutter_svg` — renders actual vector graphics | ✅ Full |
-| PDF | `syncfusion_flutter_pdfviewer` | ✅ Full |
-| MP4, MKV, MOV, AVI, WEBM, MTS, M2TS | `video_player` + `chewie` controls | ✅ Full |
-| TXT, RTF, MD, TEX, EPS, PFA | Text viewer with font size control | ✅ Full |
-| PY, JS, TS, JSON, HTML, CSS, SQL, ... | Syntax-highlighted code viewer | ✅ Full |
-| CSV, TSV | Table viewer with sortable columns | ✅ Full |
-| XLSX, XLS, XLSM, ODS | `excel` package — sheet tabs + table | ✅ Full |
-| EPUB | `epub_view` — reflowable reader | ✅ Full |
-| TTF, OTF, WOFF, WOFF2, TTC | Font preview + character map | ✅ Full |
-| ZIP, TAR, GZ, TGZ | Archive file tree listing | ✅ Full |
-| All others | Hex viewer (binary dump) | ⚠️ Hex |
+- **Real file system browsing** - Internal storage + SD card support
+- **Selection mode** with select all / deselect / invert
+- **Sort** by name, size, date, type (asc/desc)
+- **Grid & List views** per settings
+- **Context menu** (long press or ⋮) with: Open, Open With, Compress, Copy, Cut, Rename, Delete, Share, Details
+- **Pinned folders** shortcuts on Home screen
+- **Recent files** showing last modified files
+- **Search** across the filesystem
+- **Settings** - 12 categories matching HTML exactly:
+  - Appearance & Themes (10 themes with carousel picker)
+  - Previews & Thumbnails
+  - Layout & Display
+  - General Behavior
+  - Safety & Confirmations
+  - Search
+  - Archives
+  - Performance & Storage
+  - Permissions
+  - Gestures & Interaction
+  - Advanced / Developer options
+  - About
+- **Permission screen** on first launch (handles Android 9 through 14+)
+- **Dark mode** + Pure Black + 10 color themes
+- **Compress modal** with format, encryption, password
+- **Rename modal** with smart selection (excludes extension)
+- **Details modal** with file info
+- **Create folder** dialog
 
-### Formats needing system codec support (shown as hex fallback):
-- RAW camera formats (CR2, CR3, NEF, ARW) — Android has no native RAW decoder
-- RAR, 7Z — proprietary compression, no pure-Dart decoder
-- MXF — professional broadcast container
-- MOBI, AZW — DRM-protected Kindle formats  
-- INDD, AI, CDR — proprietary design formats
-
----
-
-## 🚀 Build & Run
-
-### Prerequisites
-- Flutter SDK 3.24+ (`flutter.dev`)
-- Android Studio with Android SDK
-- A physical Android device or emulator (API 21+)
-
-### Steps
+## Setup
 
 ```bash
-# 1. Clone / copy this project folder
-cd omniview
-
-# 2. Install dependencies
+# 1. Get dependencies
 flutter pub get
 
-# 3. Connect Android device (enable Developer Mode + USB Debugging)
-flutter devices
-
-# 4. Run on device
-flutter run
-
-# 5. Build release APK
+# 2. Build for Android
 flutter build apk --release
-# APK will be at: build/app/outputs/flutter-apk/app-release.apk
 ```
 
-### Install APK directly
-```bash
-adb install build/app/outputs/flutter-apk/app-release.apk
+## Required Packages
+
+```
+provider: ^6.1.2          - State management
+permission_handler: ^11.3.1  - Runtime permissions  
+path_provider: ^2.1.3     - Device paths
+path: ^1.9.0              - Path operations
+open_file: ^3.3.2         - Open files with system apps
+share_plus: ^10.0.0       - Share files
+flutter_animate: ^4.5.0   - Animations
+google_fonts: ^6.2.1      - Inter font
+shared_preferences: ^2.3.2  - Settings persistence
+mime: ^1.0.5              - File type detection
+intl: ^0.19.0             - Date formatting
+archive: ^3.6.1           - ZIP operations
 ```
 
----
+## Android Permissions
 
-## 📁 Project Structure
+The `AndroidManifest.xml` includes:
+- `READ_EXTERNAL_STORAGE` / `WRITE_EXTERNAL_STORAGE` (legacy)
+- `MANAGE_EXTERNAL_STORAGE` (Android 11+, full access)
+- `READ_MEDIA_IMAGES` / `READ_MEDIA_VIDEO` / `READ_MEDIA_AUDIO` (Android 13+)
+- `READ_MEDIA_VISUAL_USER_SELECTED` (Android 14+)
+- `VIBRATE` for haptic feedback
+- `ACCESS_NETWORK_STATE` for Wi-Fi thumbnail setting
+- `FOREGROUND_SERVICE` for background indexing
+
+## Project Structure
 
 ```
 lib/
-├── main.dart                    # App entry, theme
-├── utils/
-│   └── format_registry.dart     # All 120+ format definitions
+├── main.dart                        # Entry + permission gate
+├── models/
+│   └── app_settings.dart            # All 50+ settings
 ├── screens/
-│   ├── home_screen.dart         # Category grid + file picker
-│   ├── viewer_screen.dart       # Routes to correct viewer
-│   └── viewers/
-│       ├── image_viewer.dart    # photo_view pinch-zoom
-│       ├── svg_viewer.dart      # flutter_svg renderer
-│       ├── pdf_viewer.dart      # Syncfusion PDF
-│       ├── video_viewer.dart    # chewie + video_player
-│       ├── code_viewer.dart     # Syntax highlighting
-│       ├── text_viewer.dart     # Plain text + font size
-│       ├── spreadsheet_viewer.dart  # Excel/CSV table
-│       ├── archive_viewer.dart  # ZIP/TAR file tree
-│       ├── epub_viewer.dart     # EPUB reader
-│       ├── font_viewer.dart     # Font preview
-│       └── hex_viewer.dart      # Binary fallback
+│   ├── main_shell.dart              # Bottom nav shell
+│   ├── home_screen.dart             # Home with pinned/recent
+│   ├── files_screen.dart            # Main file browser
+│   ├── recent_screen.dart           # Recent files
+│   ├── permission_screen.dart       # First-launch permissions
+│   └── settings/
+│       └── settings_screen.dart     # Full settings (12 categories)
+├── utils/
+│   ├── app_theme.dart               # Themes & colors
+│   ├── file_system_service.dart     # FS operations
+│   └── storage_service.dart         # Storage device info
 └── widgets/
-    ├── category_card.dart
-    └── format_search_delegate.dart
+    ├── file_item_tile.dart          # List view item
+    ├── file_item_grid_card.dart     # Grid view item
+    ├── bottom_sheet_menu.dart       # Context menu sheet
+    ├── compress_modal.dart          # Archive creation
+    ├── rename_modal.dart            # Rename + Details + CreateFolder
+    ├── details_modal.dart           # Re-export
+    └── create_folder_dialog.dart    # Re-export
+
+android/
+├── app/src/main/
+│   ├── AndroidManifest.xml          # All permissions
+│   └── res/xml/file_paths.xml       # FileProvider paths
 ```
-
----
-
-## Features
-- 🔍 Global search across all 120+ formats
-- 📂 Open from file manager, other apps, or in-app picker  
-- 🖼️ Images: pinch-to-zoom, double-tap, pan
-- 🎬 Video: full playback controls, seek bar, fullscreen
-- 📊 Spreadsheets: sheet tabs, scrollable table
-- 💻 Code: 20+ language syntax highlighting
-- 📖 EPUB: reflowable reading with chapter navigation
-- 🔤 Fonts: character map and sample text preview
-- 📦 Archives: full file tree with sizes
-- 🔢 Hex: fallback for any binary format
