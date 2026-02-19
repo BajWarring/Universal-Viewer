@@ -1,4 +1,4 @@
-name: Unzip lib.zip and overwrite files
+name: 3. Unzip & Rewrite Lib.zip
 
 on:
   workflow_dispatch:
