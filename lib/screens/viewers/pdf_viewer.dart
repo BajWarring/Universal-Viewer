@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
@@ -21,7 +22,7 @@ class _PdfViewerState extends State<PdfViewer> {
         // Page controls
         Container(
           color: const Color(0xFF14141F),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           child: Row(
             children: [
               IconButton(
@@ -30,25 +31,21 @@ class _PdfViewerState extends State<PdfViewer> {
               ),
               Expanded(
                 child: Text(
-                  'Page $_currentPage of $_totalPages',
+                  _totalPages > 0 ? 'Page $_currentPage of $_totalPages' : 'Loading...',
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                 ),
               ),
               IconButton(
                 icon: const Icon(Icons.chevron_right_rounded, color: Color(0xFFE53935)),
-                onPressed: _currentPage < _totalPages ? () => _controller.nextPage() : null,
-              ),
-              IconButton(
-                icon: const Icon(Icons.search_rounded, color: Color(0xFFE53935)),
-                onPressed: () => _controller.openBookmarkView(),
+                onPressed: (_currentPage < _totalPages) ? () => _controller.nextPage() : null,
               ),
             ],
           ),
         ),
         Expanded(
-          child: SfPdfViewer.asset(
-            widget.filePath,
+          child: SfPdfViewer.file(
+            File(widget.filePath),
             controller: _controller,
             onDocumentLoaded: (details) {
               setState(() => _totalPages = details.document.pages.count);
