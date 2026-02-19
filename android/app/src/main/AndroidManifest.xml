@@ -36,9 +36,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
-    <!-- SD Card access -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-
+    <!-- SD Card access in line 6 -->
+    
     <!-- File sharing via Intent -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
