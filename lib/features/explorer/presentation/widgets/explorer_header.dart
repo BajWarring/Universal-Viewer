@@ -56,7 +56,16 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
         ],
       ),
       actions: [
-        IconButton(icon: const Icon(Icons.search), onPressed: () {}),
+        IconButton(
+         icon: const Icon(Icons.search), 
+          onPressed: () {
+           Navigator.push(
+           context,
+           MaterialPageRoute(builder: (context) => const SearchScreen()),
+           );
+         }
+      ),
+
         IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
       ],
     );
