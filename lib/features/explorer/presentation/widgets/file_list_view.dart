@@ -57,9 +57,13 @@ class FileListView extends ConsumerWidget {
               // Trigger preview or open action
             }
           },
+  
           onLongPress: () {
-            // Trigger bottom sheet for item actions (Copy, Move, Compress)
+           ActionBottomSheet.show(context, item);
           },
+
+            // Trigger bottom sheet for item actions (Copy, Move, Compress)
+          
           child: Container(
             height: 80,
             padding: const EdgeInsets.all(12),
