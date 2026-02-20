@@ -67,20 +67,16 @@ class AppSettings extends ChangeNotifier {
   bool _autoExtractDownloads = false;
   bool _deleteSourceAfterCompress = false;
 
-  // Performance
+  // Gestures & Performance
   bool _bgIndexing = true;
   bool _autoScanMedia = true;
   String _parallelOps = '2';
   bool _lowMemoryMode = false;
-
-  // Gestures
   String _longPressDuration = 'Default';
   bool _enableSwipe = true;
   String _swipeLeft = 'Delete';
   String _swipeRight = 'Details';
   bool _hapticFeedback = true;
-
-  // Advanced
   bool _debugLogs = false;
   bool _experimentalFeatures = false;
 
@@ -157,62 +153,10 @@ class AppSettings extends ChangeNotifier {
     _theme = _prefs.getString('theme') ?? 'Simple Light';
     _darkMode = _prefs.getBool('darkMode') ?? false;
     _followSystemTheme = _prefs.getBool('followSystemTheme') ?? true;
-    _animationIntensity = _prefs.getString('animationIntensity') ?? 'Full';
-    _layoutDensity = _prefs.getString('layoutDensity') ?? 'Comfortable';
-    _iconSize = _prefs.getString('iconSize') ?? 'Medium';
-    _enableThumbnails = _prefs.getBool('enableThumbnails') ?? true;
-    _imgThumbs = _prefs.getBool('imgThumbs') ?? true;
-    _vidThumb = _prefs.getBool('vidThumb') ?? true;
-    _pdfThumbs = _prefs.getBool('pdfThumbs') ?? true;
-    _albumCovers = _prefs.getBool('albumCovers') ?? true;
-    _apkIcons = _prefs.getBool('apkIcons') ?? true;
-    _archiveThumbs = _prefs.getBool('archiveThumbs') ?? true;
-    _thumbnailQuality = _prefs.getString('thumbnailQuality') ?? 'Balanced';
-    _wifiOnlyThumbs = _prefs.getBool('wifiOnlyThumbs') ?? false;
-    _chargeOnlyThumbs = _prefs.getBool('chargeOnlyThumbs') ?? false;
     _defaultLayout = _prefs.getString('defaultLayout') ?? 'List';
-    _rememberLayout = _prefs.getBool('rememberLayout') ?? true;
-    _showStorageBars = _prefs.getBool('showStorageBars') ?? true;
-    _showItemCount = _prefs.getBool('showItemCount') ?? true;
-    _showExtensions = _prefs.getBool('showExtensions') ?? true;
+    _showHiddenFiles = _prefs.getBool('showHiddenFiles') ?? false;
     _showFileSize = _prefs.getBool('showFileSize') ?? true;
     _showDateModified = _prefs.getBool('showDateModified') ?? true;
-    _showTimeModified = _prefs.getBool('showTimeModified') ?? false;
-    _showTypeLabel = _prefs.getBool('showTypeLabel') ?? false;
-    _showFullPath = _prefs.getBool('showFullPath') ?? false;
-    _sizeFormat = _prefs.getString('sizeFormat') ?? 'Human readable';
-    _dateFormat = _prefs.getString('dateFormat') ?? 'Relative';
-    _startupLocation = _prefs.getString('startupLocation') ?? 'Internal storage';
-    _openLastSession = _prefs.getBool('openLastSession') ?? false;
-    _defaultOpenAction = _prefs.getString('defaultOpenAction') ?? 'Open file';
-    _singleTapOpen = _prefs.getBool('singleTapOpen') ?? true;
-    _showHiddenFiles = _prefs.getBool('showHiddenFiles') ?? false;
-    _dimHiddenFiles = _prefs.getBool('dimHiddenFiles') ?? true;
-    _autoRefresh = _prefs.getBool('autoRefresh') ?? true;
-    _confirmDelete = _prefs.getBool('confirmDelete') ?? true;
-    _confirmOverwrite = _prefs.getBool('confirmOverwrite') ?? true;
-    _confirmLargeMove = _prefs.getBool('confirmLargeMove') ?? true;
-    _largeFileThreshold = _prefs.getInt('largeFileThreshold') ?? 500;
-    _showProgressDialog = _prefs.getBool('showProgressDialog') ?? true;
-    _searchSubfolders = _prefs.getBool('searchSubfolders') ?? true;
-    _searchHidden = _prefs.getBool('searchHidden') ?? false;
-    _rememberSearches = _prefs.getBool('rememberSearches') ?? true;
-    _defaultArchiveFormat = _prefs.getString('defaultArchiveFormat') ?? 'ZIP';
-    _archiveCompressionLevel = _prefs.getString('archiveCompressionLevel') ?? 'Balanced';
-    _defaultEncryption = _prefs.getString('defaultEncryption') ?? 'None';
-    _autoExtractDownloads = _prefs.getBool('autoExtractDownloads') ?? false;
-    _deleteSourceAfterCompress = _prefs.getBool('deleteSourceAfterCompress') ?? false;
-    _bgIndexing = _prefs.getBool('bgIndexing') ?? true;
-    _autoScanMedia = _prefs.getBool('autoScanMedia') ?? true;
-    _parallelOps = _prefs.getString('parallelOps') ?? '2';
-    _lowMemoryMode = _prefs.getBool('lowMemoryMode') ?? false;
-    _longPressDuration = _prefs.getString('longPressDuration') ?? 'Default';
-    _enableSwipe = _prefs.getBool('enableSwipe') ?? true;
-    _swipeLeft = _prefs.getString('swipeLeft') ?? 'Delete';
-    _swipeRight = _prefs.getString('swipeRight') ?? 'Details';
-    _hapticFeedback = _prefs.getBool('hapticFeedback') ?? true;
-    _debugLogs = _prefs.getBool('debugLogs') ?? false;
-    _experimentalFeatures = _prefs.getBool('experimentalFeatures') ?? false;
     
     final pinnedStr = _prefs.getString('pinnedFolders');
     if (pinnedStr != null) {
@@ -224,7 +168,14 @@ class AppSettings extends ChangeNotifier {
   }
 
   void setSetting(String key, dynamic value) {
-    // Handling omitted for brevity in switch... assume standard behavior for native settings.
+    switch (key) {
+      case 'theme': _theme = value; break;
+      case 'darkMode': _darkMode = value; break;
+      case 'defaultLayout': _defaultLayout = value; break;
+      case 'showHiddenFiles': _showHiddenFiles = value; break;
+      case 'showFileSize': _showFileSize = value; break;
+      case 'showDateModified': _showDateModified = value; break;
+    }
     _prefs.setString(key, value is String ? value : value.toString());
     if (value is bool) _prefs.setBool(key, value);
     if (value is int) _prefs.setInt(key, value);
@@ -239,7 +190,12 @@ class AppSettings extends ChangeNotifier {
 
   void resetToDefaults() {
     _prefs.clear();
-    // Default assignments...
+    _theme = 'Simple Light';
+    _darkMode = false;
+    _pinnedFolders = [
+      {'name': 'Documents', 'path': '/storage/emulated/0/Documents'},
+      {'name': 'Downloads', 'path': '/storage/emulated/0/Download'},
+    ];
     notifyListeners();
   }
 }
