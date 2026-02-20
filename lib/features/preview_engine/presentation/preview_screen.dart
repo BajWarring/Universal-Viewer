@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
-import '../../filesystem/domain/entities/omni_node.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../filesystem/domain/entities/omni_node.dart';
 import 'renderers/text_previewer.dart';
 import 'renderers/image_previewer.dart';
-// import 'renderers/pdf_previewer.dart';
-// import 'renderers/media_previewer.dart';
 
-class PreviewScreen extends StatelessWidget {
+// Import these once Phase 8 is implemented. 
+import '../../media_player/application/audio_notifier.dart';
+import '../../media_player/presentation/video_player_screen.dart';
+
+class PreviewScreen extends ConsumerWidget {
   final OmniNode node;
 
   const PreviewScreen({super.key, required this.node});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(
         title: Text(node.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -20,11 +23,11 @@ class PreviewScreen extends StatelessWidget {
           IconButton(icon: const Icon(Icons.info_outline), onPressed: () {}),
         ],
       ),
-      body: _buildPreviewer(),
+      body: _buildPreviewer(context, ref),
     );
   }
 
-  Widget _buildPreviewer() {
+  Widget _buildPreviewer(BuildContext context, WidgetRef ref) {
     final ext = node.extension;
     
     // Text & Code
@@ -37,20 +40,17 @@ class PreviewScreen extends StatelessWidget {
       return ImagePreviewer(path: node.path);
     }
     
-    // Audio Routing (Triggers global player and pops back)
+    // Audio Routing (Uncomment when AudioNotifier is built)
     if (['mp3', 'wav', 'flac', 'm4a'].contains(ext)) {
-      // Start playing in background
-      ref.read(audioProvider.notifier).playFile(node);
-      // Optional: Return a widget that says "Playing in Background" or pop instantly
+      // ref.read(audioProvider.notifier).playFile(node);
       return const Center(child: Text('Playing in Mini Player...')); 
     }
 
-    // Video Routing
+    // Video Routing (Uncomment when VideoPlayerScreen is built)
     if (['mp4', 'mkv', 'avi', 'webm'].contains(ext)) {
-      // MediaKit handles the UI, so we push the dedicated video screen
-      return VideoPlayerScreen(videoNode: node);
+      // return VideoPlayerScreen(videoNode: node);
+      return const Center(child: Text('Video Player Coming Soon')); 
     }
-
 
     // Documents 
     if (['pdf'].contains(ext)) {
