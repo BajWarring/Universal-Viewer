@@ -30,6 +30,10 @@ dependencies:
   google_fonts: ^6.2.1
   reorderable_grid_view: ^2.2.8
 
+  # System & Background Operations
+  wakelock_plus: ^1.2.8
+  flutter_local_notifications: ^17.1.2
+
   # Settings Persistence
   shared_preferences: ^2.3.2
 
