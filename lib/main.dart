@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/config/injection_container.dart';
 import 'core/routing/app_router.dart';
 import 'core/theme/theme_provider.dart';
-import 'package:dynamic_color/dynamic_color.dart';
 import 'core/theme/app_theme.dart';
 
 void main() async {
@@ -25,25 +24,21 @@ class OmniFileManagerApp extends ConsumerWidget {
     final router = ref.watch(appRouterProvider);
     final themeState = ref.watch(themeProvider);
 
-    return DynamicColorBuilder(
-      builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-        return MaterialApp.router(
-          title: 'Omni File Manager',
-          debugShowCheckedModeBanner: false,
-          routerConfig: router,
-          theme: AppTheme.buildTheme(
-            themeName: themeState.themeName,
-            brightness: Brightness.light,
-            dynamicColorScheme: lightDynamic,
-          ),
-          darkTheme: AppTheme.buildTheme(
-            themeName: themeState.themeName,
-            brightness: Brightness.dark,
-            dynamicColorScheme: darkDynamic,
-          ),
-          themeMode: themeState.themeMode,
-        );
-      },
+    return MaterialApp.router(
+      title: 'Omni File Manager',
+      debugShowCheckedModeBanner: false,
+      routerConfig: router,
+      theme: AppTheme.buildTheme(
+        themeName: themeState.themeName,
+        brightness: Brightness.light,
+        dynamicColorScheme: null,
+      ),
+      darkTheme: AppTheme.buildTheme(
+        themeName: themeState.themeName,
+        brightness: Brightness.dark,
+        dynamicColorScheme: null,
+      ),
+      themeMode: themeState.themeMode,
     );
   }
 }
