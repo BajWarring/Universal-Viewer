@@ -21,14 +21,9 @@ dependencies:
   google_fonts: ^6.2.1
   flutter_highlight: ^0.7.0
 
-  # Media Players (Verified Versions)
+  # Media Players (Official & Verified)
   just_audio: ^0.9.36
-  media_kit: ^1.1.11
-  media_kit_video: ^1.2.4
-  media_kit_libs_video: ^1.0.7 
-
-dependency_overrides:
-  media_kit_video: ^1.4.0  # Forces the Flutter 3.27 fix
+  video_player: ^2.9.2
 
 dev_dependencies:
   flutter_lints: ^4.0.0
