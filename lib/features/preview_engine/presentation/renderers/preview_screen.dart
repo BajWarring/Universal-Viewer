@@ -37,10 +37,20 @@ class PreviewScreen extends StatelessWidget {
       return ImagePreviewer(path: node.path);
     }
     
-    // Audio / Video 
-    if (['mp3', 'wav', 'mp4', 'mkv'].contains(ext)) {
-      return const Center(child: Text('Media Kit Player rendering here...'));
+    // Audio Routing (Triggers global player and pops back)
+    if (['mp3', 'wav', 'flac', 'm4a'].contains(ext)) {
+      // Start playing in background
+      ref.read(audioProvider.notifier).playFile(node);
+      // Optional: Return a widget that says "Playing in Background" or pop instantly
+      return const Center(child: Text('Playing in Mini Player...')); 
     }
+
+    // Video Routing
+    if (['mp4', 'mkv', 'avi', 'webm'].contains(ext)) {
+      // MediaKit handles the UI, so we push the dedicated video screen
+      return VideoPlayerScreen(videoNode: node);
+    }
+
 
     // Documents 
     if (['pdf'].contains(ext)) {
