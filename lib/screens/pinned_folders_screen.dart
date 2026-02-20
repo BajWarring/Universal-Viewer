@@ -89,7 +89,13 @@ class _PinnedFoldersScreenState extends State<PinnedFoldersScreen> {
               key: ValueKey(folder['path']),
               color: isDark ? Colors.white.withOpacity(0.04) : Colors.white,
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), border: Border.all(color: isDark ? Colors.white.withOpacity(0.07) : const Color(0xFFE2E8F0))),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16), 
+                // Fix: Using 'side' and 'BorderSide' instead of 'border' and 'Border.all'
+                side: BorderSide(
+                  color: isDark ? Colors.white.withOpacity(0.07) : const Color(0xFFE2E8F0),
+                ),
+              ),
               child: Stack(
                 children: [
                   Center(
