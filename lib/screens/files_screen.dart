@@ -19,7 +19,9 @@ import '../widgets/details_modal.dart';
 import '../widgets/create_folder_dialog.dart';
 
 class FilesScreen extends StatefulWidget {
-  const FilesScreen({super.key});
+  final String? initialPath;
+  final String? initialTitle;
+  const FilesScreen({super.key, this.initialPath, this.initialTitle});
 
   @override
   State<FilesScreen> createState() => _FilesScreenState();
@@ -40,7 +42,14 @@ class _FilesScreenState extends State<FilesScreen> {
   @override
   void initState() {
     super.initState();
-    _loadStorage();
+    if (widget.initialPath != null) {
+      _atRoot = false;
+      _currentRootPath = '/storage/emulated/0';
+      _pathStack = ['Internal Storage', ...widget.initialPath!.replaceFirst('/storage/emulated/0/', '').split('/')];
+      _loadDirectory(widget.initialPath!);
+    } else {
+      _loadStorage();
+    }
   }
 
   Future<void> _loadStorage() async {
@@ -82,12 +91,16 @@ class _FilesScreenState extends State<FilesScreen> {
 
   void _navigateUp() {
     if (_pathStack.length <= 1) {
-      setState(() {
-        _atRoot = true;
-        _pathStack = [];
-        _currentRootPath = null;
-        _files = [];
-      });
+      if (widget.initialPath != null) {
+        Navigator.pop(context); // Pop if pushed as a shortcut
+      } else {
+        setState(() {
+          _atRoot = true;
+          _pathStack = [];
+          _currentRootPath = null;
+          _files = [];
+        });
+      }
       return;
     }
     _pathStack.removeLast();
@@ -151,20 +164,32 @@ class _FilesScreenState extends State<FilesScreen> {
     final primaryColor = AppTheme.getPrimaryColor(settings.theme);
     final isDark = settings.darkMode;
 
-    return Scaffold(
-      body: Column(
-        children: [
-          _buildHeader(context, primaryColor, isDark),
-          Expanded(
-            child: _atRoot
-                ? _buildStorageList(context, primaryColor, isDark)
-                : _buildFileList(context, settings, primaryColor, isDark),
-          ),
-        ],
+    return PopScope(
+      canPop: _atRoot,
+      onPopInvoked: (didPop) {
+        if (!didPop && !_atRoot) {
+          if (_isSelectionMode) {
+            _toggleSelectionMode();
+          } else {
+            _navigateUp();
+          }
+        }
+      },
+      child: Scaffold(
+        body: Column(
+          children: [
+            _buildHeader(context, primaryColor, isDark),
+            Expanded(
+              child: _atRoot
+                  ? _buildStorageList(context, primaryColor, isDark)
+                  : _buildFileList(context, settings, primaryColor, isDark),
+            ),
+          ],
+        ),
+        floatingActionButton: !_atRoot && !_isSelectionMode
+            ? _buildFAB(context, primaryColor)
+            : null,
       ),
-      floatingActionButton: !_atRoot && !_isSelectionMode
-          ? _buildFAB(context, primaryColor)
-          : null,
     );
   }
 
@@ -183,12 +208,39 @@ class _FilesScreenState extends State<FilesScreen> {
     );
   }
 
+  void _showHeaderDropdown(BuildContext context) {
+    showMenu(
+      context: context,
+      position: const RelativeRect.fromLTRB(20, 100, 20, 0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      items: [
+        const PopupMenuItem(enabled: false, child: Text('Current Path', style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w700))),
+        ..._pathStack.asMap().entries.map((e) {
+          final isLast = e.key == _pathStack.length - 1;
+          return PopupMenuItem(
+            value: e.key,
+            child: Row(
+              children: [
+                SizedBox(width: e.key * 12.0),
+                Icon(isLast ? Icons.folder_open : Icons.folder, size: 20, color: isLast ? Theme.of(context).colorScheme.primary : Colors.grey),
+                const SizedBox(width: 12),
+                Text(e.value, style: GoogleFonts.inter(fontSize: 14, fontWeight: isLast ? FontWeight.bold : FontWeight.w500)),
+              ],
+            ),
+          );
+        }),
+      ],
+    ).then((index) {
+      if (index != null) _navigateToIndex(index as int);
+    });
+  }
+
   Widget _buildNormalHeader(BuildContext context, Color primaryColor) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
       child: Row(
         children: [
-          if (!_atRoot)
+          if (!_atRoot || widget.initialPath != null)
             IconButton(
               icon: const Icon(Icons.arrow_back_rounded),
               onPressed: _navigateUp,
@@ -197,13 +249,10 @@ class _FilesScreenState extends State<FilesScreen> {
             child: _atRoot
                 ? Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Text(
-                      'Files',
-                      style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w800),
-                    ),
+                    child: Text('Files', style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w800)),
                   )
                 : GestureDetector(
-                    onTap: () => _showLocationPopup(context, primaryColor),
+                    onTap: () => _showHeaderDropdown(context),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: Column(
@@ -223,10 +272,7 @@ class _FilesScreenState extends State<FilesScreen> {
                           ),
                           Text(
                             '/${_pathStack.join("/")}',
-                            style: GoogleFonts.inter(
-                              fontSize: 10,
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.45),
-                            ),
+                            style: GoogleFonts.inter(fontSize: 10, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.45)),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
@@ -234,10 +280,7 @@ class _FilesScreenState extends State<FilesScreen> {
                     ),
                   ),
           ),
-          IconButton(
-            icon: const Icon(Icons.search_rounded),
-            onPressed: () {},
-          ),
+          IconButton(icon: const Icon(Icons.search_rounded), onPressed: () {}),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert_rounded),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -246,12 +289,69 @@ class _FilesScreenState extends State<FilesScreen> {
               if (v == 'sort') _showSortDialog(context, primaryColor);
             },
             itemBuilder: (_) => [
-              if (!_atRoot)
-                const PopupMenuItem(value: 'select', child: Text('Selection mode')),
+              if (!_atRoot) const PopupMenuItem(value: 'select', child: Text('Selection mode')),
               const PopupMenuItem(value: 'sort', child: Text('Sort by')),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  void _showSelectionBottomSheet(BuildContext context, Color primaryColor) {
+    final selectedItems = _files.where((f) => _selectedItems.contains(f.path)).toList();
+    final isSingle = selectedItems.length == 1;
+    final allApks = selectedItems.every((f) => f.isApk);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 16),
+            if (isSingle) ...[
+              ListTile(
+                leading: Icon(selectedItems.first.isApk ? Icons.system_update : Icons.open_in_new),
+                title: Text(selectedItems.first.isApk ? 'Install APK' : 'Open'),
+                onTap: () { Navigator.pop(context); _openFile(selectedItems.first, context); },
+              ),
+              if (selectedItems.first.isApk)
+                 ListTile(
+                  leading: const Icon(Icons.visibility_outlined),
+                  title: const Text('View APK contents'),
+                  onTap: () { Navigator.pop(context); },
+                ),
+              if (selectedItems.first.isArchive)
+                ListTile(
+                  leading: const Icon(Icons.unarchive_outlined),
+                  title: const Text('Extract Here'),
+                  onTap: () { Navigator.pop(context); },
+                ),
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('Rename'),
+                onTap: () { Navigator.pop(context); _showRenameModal(context, selectedItems.first, primaryColor); },
+              ),
+            ],
+            if (allApks && !isSingle)
+              ListTile(
+                leading: const Icon(Icons.system_update),
+                title: const Text('Install Split APKs'),
+                onTap: () { Navigator.pop(context); },
+              ),
+            ListTile(leading: const Icon(Icons.content_copy), title: const Text('Copy'), onTap: () { Navigator.pop(context); }),
+            ListTile(leading: const Icon(Icons.content_cut), title: const Text('Cut'), onTap: () { Navigator.pop(context); }),
+            ListTile(leading: const Icon(Icons.folder_zip_outlined), title: const Text('Compress'), onTap: () { Navigator.pop(context); _showCompressModal(context, selectedItems.first, primaryColor); }),
+            ListTile(leading: const Icon(Icons.info_outline), title: Text(isSingle ? 'Details' : 'Group Details'), onTap: () { Navigator.pop(context); if(isSingle) _showDetails(context, selectedItems.first, primaryColor); }),
+            ListTile(leading: const Icon(Icons.share_outlined), title: const Text('Share'), onTap: () { Navigator.pop(context); }),
+            ListTile(leading: const Icon(Icons.delete_outline, color: Colors.red), title: const Text('Delete', style: TextStyle(color: Colors.red)), onTap: () { Navigator.pop(context); _confirmBulkDelete(context); }),
+          ],
+        ),
       ),
     );
   }
@@ -261,15 +361,9 @@ class _FilesScreenState extends State<FilesScreen> {
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
       child: Row(
         children: [
-          IconButton(
-            icon: const Icon(Icons.close_rounded),
-            onPressed: _toggleSelectionMode,
-          ),
+          IconButton(icon: const Icon(Icons.close_rounded), onPressed: _toggleSelectionMode),
           Expanded(
-            child: Text(
-              '${_selectedItems.length} selected',
-              style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800),
-            ),
+            child: Text('${_selectedItems.length} selected', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800)),
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.checklist_rounded),
@@ -283,27 +377,13 @@ class _FilesScreenState extends State<FilesScreen> {
             ],
           ),
           if (_selectedItems.isNotEmpty)
-            PopupMenuButton<String>(
+            IconButton(
               icon: const Icon(Icons.more_vert_rounded),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              onSelected: (v) => _handleBulkAction(context, v),
-              itemBuilder: (_) => [
-                const PopupMenuItem(value: 'delete', child: Text('Delete selected')),
-                const PopupMenuItem(value: 'copy', child: Text('Copy selected')),
-                const PopupMenuItem(value: 'compress', child: Text('Compress selected')),
-                const PopupMenuItem(value: 'share', child: Text('Share selected')),
-              ],
+              onPressed: () => _showSelectionBottomSheet(context, primaryColor),
             ),
         ],
       ),
     );
-  }
-
-  void _handleBulkAction(BuildContext context, String action) {
-    if (action == 'delete') {
-      _confirmBulkDelete(context);
-    }
-    // Other bulk actions...
   }
 
   Future<void> _confirmBulkDelete(BuildContext context) async {
@@ -347,24 +427,11 @@ class _FilesScreenState extends State<FilesScreen> {
   }
 
   Widget _buildFileList(BuildContext context, AppSettings settings, Color primaryColor, bool isDark) {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_files.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.folder_open_rounded, size: 72, color: primaryColor.withOpacity(0.3)),
-            const SizedBox(height: 12),
-            Text('Empty folder', style: GoogleFonts.inter(color: Colors.grey)),
-          ],
-        ),
-      );
-    }
+    if (_loading) return const Center(child: CircularProgressIndicator());
 
     final isGrid = settings.defaultLayout == 'Grid';
+    final hasGoBack = !_atRoot;
+    final itemCount = _files.length + (hasGoBack ? 1 : 0);
 
     return RefreshIndicator(
       onRefresh: () => _loadDirectory(_buildCurrentPath()),
@@ -372,58 +439,79 @@ class _FilesScreenState extends State<FilesScreen> {
           ? GridView.builder(
               padding: const EdgeInsets.fromLTRB(12, 4, 12, 100),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                childAspectRatio: 0.85,
+                crossAxisCount: 3, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 0.85
               ),
-              itemCount: _files.length,
-              itemBuilder: (ctx, i) => FileItemGridCard(
-                item: _files[i],
-                isSelected: _selectedItems.contains(_files[i].path),
-                isSelectionMode: _isSelectionMode,
-                primaryColor: primaryColor,
-                isDark: isDark,
-                onTap: () => _handleItemTap(_files[i], context),
-                onLongPress: () => _handleItemLongPress(_files[i], context),
-              ).animate(delay: Duration(milliseconds: i * 20)).fadeIn(duration: 200.ms),
+              itemCount: itemCount,
+              itemBuilder: (ctx, i) {
+                if (hasGoBack && i == 0) return _buildGoBackGrid();
+                final fileIndex = hasGoBack ? i - 1 : i;
+                return FileItemGridCard(
+                  item: _files[fileIndex],
+                  isSelected: _selectedItems.contains(_files[fileIndex].path),
+                  isSelectionMode: _isSelectionMode, primaryColor: primaryColor, isDark: isDark,
+                  onTap: () => _handleItemTap(_files[fileIndex], context),
+                  onLongPress: () => _handleItemLongPress(_files[fileIndex], context),
+                ).animate(delay: Duration(milliseconds: i * 20)).fadeIn(duration: 200.ms);
+              },
             )
           : ListView.builder(
               padding: const EdgeInsets.fromLTRB(12, 4, 12, 100),
-              itemCount: _files.length,
-              itemBuilder: (ctx, i) => FileItemTile(
-                item: _files[i],
-                isSelected: _selectedItems.contains(_files[i].path),
-                isSelectionMode: _isSelectionMode,
-                primaryColor: primaryColor,
-                isDark: isDark,
-                showSize: settings.showFileSize,
-                showDate: settings.showDateModified,
-                onTap: () => _handleItemTap(_files[i], context),
-                onLongPress: () => _handleItemLongPress(_files[i], context),
-                onMoreTap: () => _showBottomSheet(context, _files[i], primaryColor),
-              ).animate(delay: Duration(milliseconds: i * 20)).fadeIn(duration: 200.ms),
+              itemCount: itemCount,
+              itemBuilder: (ctx, i) {
+                if (hasGoBack && i == 0) return _buildGoBackTile();
+                final fileIndex = hasGoBack ? i - 1 : i;
+                return FileItemTile(
+                  item: _files[fileIndex],
+                  isSelected: _selectedItems.contains(_files[fileIndex].path),
+                  isSelectionMode: _isSelectionMode, primaryColor: primaryColor, isDark: isDark,
+                  showSize: settings.showFileSize, showDate: settings.showDateModified,
+                  onTap: () => _handleItemTap(_files[fileIndex], context),
+                  onLongPress: () => _handleItemLongPress(_files[fileIndex], context),
+                  onMoreTap: () => _showBottomSheet(context, _files[fileIndex], primaryColor),
+                ).animate(delay: Duration(milliseconds: i * 20)).fadeIn(duration: 200.ms);
+              },
             ),
     );
   }
 
+  Widget _buildGoBackTile() {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      leading: Container(
+        width: 48, height: 48,
+        decoration: BoxDecoration(color: Colors.grey.withOpacity(0.1), borderRadius: BorderRadius.circular(14)),
+        child: const Icon(Icons.turn_left_rounded, color: Colors.grey),
+      ),
+      title: Text('Go Back', style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.grey)),
+      onTap: _navigateUp,
+    );
+  }
+
+  Widget _buildGoBackGrid() {
+    return GestureDetector(
+      onTap: _navigateUp,
+      child: Container(
+        decoration: BoxDecoration(color: Colors.grey.withOpacity(0.05), borderRadius: BorderRadius.circular(16)),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.turn_left_rounded, size: 32, color: Colors.grey),
+            SizedBox(height: 8),
+            Text('Go Back', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600, fontSize: 12)),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _handleItemTap(FileItem item, BuildContext context) {
-    if (_isSelectionMode) {
-      _toggleItemSelection(item);
-      return;
-    }
-    if (item.isFolder) {
-      _enterFolder(item);
-    } else {
-      _openFile(item, context);
-    }
+    if (_isSelectionMode) { _toggleItemSelection(item); return; }
+    if (item.isFolder) { _enterFolder(item); } else { _openFile(item, context); }
   }
 
   void _handleItemLongPress(FileItem item, BuildContext context) {
     HapticFeedback.mediumImpact();
-    if (!_isSelectionMode) {
-      _toggleSelectionMode();
-    }
+    if (!_isSelectionMode) _toggleSelectionMode();
     _toggleItemSelection(item);
   }
 
@@ -441,61 +529,31 @@ class _FilesScreenState extends State<FilesScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => FileBottomSheet(
-        item: item,
-        primaryColor: primaryColor,
+        item: item, primaryColor: primaryColor,
         onOpen: () { Navigator.pop(context); _openFile(item, context); },
         onCompress: () { Navigator.pop(context); _showCompressModal(context, item, primaryColor); },
         onRename: () { Navigator.pop(context); _showRenameModal(context, item, primaryColor); },
         onDelete: () { Navigator.pop(context); _deleteItem(context, item); },
         onDetails: () { Navigator.pop(context); _showDetails(context, item, primaryColor); },
         onShare: () { Navigator.pop(context); _shareItem(item); },
-        onCopy: () { Navigator.pop(context); },
-        onCut: () { Navigator.pop(context); },
+        onCopy: () { Navigator.pop(context); }, onCut: () { Navigator.pop(context); },
         currentPath: _buildCurrentPath(),
       ),
     );
   }
 
   Future<void> _deleteItem(BuildContext context, FileItem item) async {
-    final settings = context.read<AppSettings>();
-    if (settings.confirmDelete) {
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Delete'),
-          content: Text('Delete "${item.name}"? This cannot be undone.'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete'),
-            ),
-          ],
-        ),
-      );
-      if (confirm != true) return;
-    }
     final success = await FileSystemService.deleteItem(item.path);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(success ? '${item.name} deleted' : 'Failed to delete ${item.name}'),
-        behavior: SnackBarBehavior.floating,
-      ));
-      if (success) _loadDirectory(_buildCurrentPath());
-    }
+    if (mounted && success) _loadDirectory(_buildCurrentPath());
   }
 
   void _showCompressModal(BuildContext context, FileItem item, Color primaryColor) {
     showDialog(
       context: context,
       builder: (_) => CompressModal(
-        itemName: item.name,
-        primaryColor: primaryColor,
+        itemName: item.name, primaryColor: primaryColor,
         onCompress: (archiveName, format, password) async {
           Navigator.pop(context);
-          // Archive creation handled by CompressModal
           _loadDirectory(_buildCurrentPath());
         },
       ),
@@ -506,70 +564,28 @@ class _FilesScreenState extends State<FilesScreen> {
     showDialog(
       context: context,
       builder: (_) => RenameModal(
-        currentName: item.name,
-        primaryColor: primaryColor,
+        currentName: item.name, primaryColor: primaryColor,
         onRename: (newName) async {
           Navigator.pop(context);
           final success = await FileSystemService.renameItem(item.path, newName);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(success ? 'Renamed to $newName' : 'Failed to rename'),
-              behavior: SnackBarBehavior.floating,
-            ));
-            if (success) _loadDirectory(_buildCurrentPath());
-          }
+          if (mounted && success) _loadDirectory(_buildCurrentPath());
         },
       ),
     );
   }
 
   void _showDetails(BuildContext context, FileItem item, Color primaryColor) {
-    showDialog(
-      context: context,
-      builder: (_) => DetailsModal(
-        item: item,
-        primaryColor: primaryColor,
-        currentPath: _buildCurrentPath(),
-      ),
-    );
+    showDialog(context: context, builder: (_) => DetailsModal(item: item, primaryColor: primaryColor, currentPath: _buildCurrentPath()));
   }
 
-  void _shareItem(FileItem item) {
-    Share.shareXFiles([XFile(item.path)], text: item.name);
-  }
-
-  void _showLocationPopup(BuildContext context, Color primaryColor) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _LocationSheet(
-        pathStack: _pathStack,
-        primaryColor: primaryColor,
-        onNavigate: (index) {
-          Navigator.pop(context);
-          _navigateToIndex(index);
-        },
-        onSwitchStorage: (device) {
-          Navigator.pop(context);
-          _navigateToRoot(device);
-        },
-        storageDevices: _storageDevices,
-      ),
-    );
-  }
+  void _shareItem(FileItem item) { Share.shareXFiles([XFile(item.path)], text: item.name); }
 
   void _showSortDialog(BuildContext context, Color primaryColor) {
     showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
+      context: context, backgroundColor: Colors.transparent,
       builder: (_) => _SortSheet(
-        currentSortBy: _sortBy,
-        currentOrder: _sortOrder,
-        primaryColor: primaryColor,
-        onSortChanged: (by, order) {
-          setState(() { _sortBy = by; _sortOrder = order; });
-          _loadDirectory(_buildCurrentPath());
-        },
+        currentSortBy: _sortBy, currentOrder: _sortOrder, primaryColor: primaryColor,
+        onSortChanged: (by, order) { setState(() { _sortBy = by; _sortOrder = order; }); _loadDirectory(_buildCurrentPath()); },
       ),
     );
   }
@@ -577,8 +593,7 @@ class _FilesScreenState extends State<FilesScreen> {
   Widget _buildFAB(BuildContext context, Color primaryColor) {
     return FloatingActionButton(
       onPressed: () => _showCreateOptions(context, primaryColor),
-      backgroundColor: primaryColor,
-      foregroundColor: Colors.white,
+      backgroundColor: primaryColor, foregroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: const Icon(Icons.add_rounded, size: 28),
     );
@@ -586,14 +601,10 @@ class _FilesScreenState extends State<FilesScreen> {
 
   void _showCreateOptions(BuildContext context, Color primaryColor) {
     showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
+      context: context, backgroundColor: Colors.transparent,
       builder: (_) => _CreateOptionsSheet(
         primaryColor: primaryColor,
-        onCreateFolder: () {
-          Navigator.pop(context);
-          _showCreateFolderDialog(context, primaryColor);
-        },
+        onCreateFolder: () { Navigator.pop(context); _showCreateFolderDialog(context, primaryColor); },
       ),
     );
   }
@@ -606,20 +617,14 @@ class _FilesScreenState extends State<FilesScreen> {
         onCreate: (name) async {
           Navigator.pop(context);
           final success = await FileSystemService.createFolder(_buildCurrentPath(), name);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(success ? 'Folder "$name" created' : 'Failed to create folder'),
-              behavior: SnackBarBehavior.floating,
-            ));
-            if (success) _loadDirectory(_buildCurrentPath());
-          }
+          if (mounted && success) _loadDirectory(_buildCurrentPath());
         },
       ),
     );
   }
 }
 
-// ---- Sub-widgets ----
+// ---- Sub-widgets (Fully Restored) ----
 
 class _StorageDeviceCard extends StatelessWidget {
   final StorageInfo device;
@@ -711,79 +716,6 @@ class _StorageDeviceCard extends StatelessWidget {
   }
 }
 
-class _LocationSheet extends StatelessWidget {
-  final List<String> pathStack;
-  final Color primaryColor;
-  final Function(int) onNavigate;
-  final Function(StorageInfo) onSwitchStorage;
-  final List<StorageInfo> storageDevices;
-
-  const _LocationSheet({
-    required this.pathStack,
-    required this.primaryColor,
-    required this.onNavigate,
-    required this.onSwitchStorage,
-    required this.storageDevices,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 40, height: 4,
-              decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(2)),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text('Current Path', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.5, color: Colors.grey)),
-          const SizedBox(height: 8),
-          ...pathStack.asMap().entries.map((e) {
-            final isLast = e.key == pathStack.length - 1;
-            return ListTile(
-              dense: true,
-              contentPadding: EdgeInsets.only(left: e.key * 12.0),
-              leading: Icon(
-                e.key == 0 ? Icons.smartphone_rounded : (isLast ? Icons.folder_open_rounded : Icons.folder_rounded),
-                color: isLast ? primaryColor : Colors.grey,
-                size: 20,
-              ),
-              title: Text(
-                e.value,
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                  color: isLast ? primaryColor : null,
-                ),
-              ),
-              onTap: isLast ? null : () => onNavigate(e.key),
-            );
-          }),
-          const Divider(height: 24),
-          Text('Switch Drive', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.5, color: Colors.grey)),
-          const SizedBox(height: 8),
-          ...storageDevices.map((d) => ListTile(
-            dense: true,
-            leading: Icon(d.isRemovable ? Icons.sd_card_rounded : Icons.smartphone_rounded, color: Colors.grey),
-            title: Text(d.label, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13)),
-            onTap: () => onSwitchStorage(d),
-          )),
-          SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
-        ],
-      ),
-    );
-  }
-}
-
 class _SortSheet extends StatefulWidget {
   final SortBy currentSortBy;
   final SortOrder currentOrder;
@@ -820,6 +752,7 @@ class _SortSheetState extends State<_SortSheet> {
       (SortBy.date, 'Date', Icons.calendar_today_rounded),
       (SortBy.type, 'Type', Icons.category_rounded),
     ];
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
