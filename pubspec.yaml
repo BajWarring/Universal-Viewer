@@ -12,6 +12,9 @@ dependencies:
   flutter:
     sdk: flutter
 
+  permission_handler: ^11.3.1
+
+
   # State Management & DI
   flutter_riverpod: ^2.5.1
   get_it: ^7.6.4
