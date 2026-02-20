@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../filesystem/domain/entities/omni_node.dart';
 import '../../../../filesystem/application/directory_notifier.dart';
+import '../../../preview_engine/presentation/preview_screen.dart';
+import 'action_bottom_sheet.dart';
 
 class FileListView extends ConsumerWidget {
   final List<OmniNode> nodes;
