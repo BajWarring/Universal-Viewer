@@ -16,7 +16,9 @@ import '../widgets/bottom_sheet_menu.dart';
 import '../widgets/compress_modal.dart';
 import '../widgets/rename_modal.dart';
 import '../widgets/details_modal.dart';
-import '../widgets/create_folder_dialog.dart';
+import '../widgets/operation_progress_dialog.dart';
+
+enum ClipboardAction { none, copy, cut, extract }
 
 class FilesScreen extends StatefulWidget {
   final String? initialPath;
@@ -34,8 +36,13 @@ class _FilesScreenState extends State<FilesScreen> {
   List<String> _pathStack = [];
   String? _currentRootPath;
   bool _loading = false;
+  
+  // Selection & Clipboard
   bool _isSelectionMode = false;
   final Set<String> _selectedItems = {};
+  ClipboardAction _clipboardAction = ClipboardAction.none;
+  List<String> _clipboardItems = [];
+
   SortBy _sortBy = SortBy.name;
   SortOrder _sortOrder = SortOrder.asc;
 
@@ -45,8 +52,8 @@ class _FilesScreenState extends State<FilesScreen> {
     _loadStorage();
     if (widget.initialPath != null) {
       _atRoot = false;
-      _currentRootPath = '/storage/emulated/0';
-      _pathStack = ['Internal Storage', ...widget.initialPath!.replaceFirst('/storage/emulated/0/', '').split('/')];
+      _currentRootPath = widget.initialPath!.contains('/storage/emulated/0') ? '/storage/emulated/0' : widget.initialPath;
+      _pathStack = ['Internal Storage', ...widget.initialPath!.replaceFirst(RegExp(r'^/storage/emulated/0/?'), '').split('/')].where((e) => e.isNotEmpty).toList();
       _loadDirectory(widget.initialPath!);
     }
   }
@@ -84,10 +91,10 @@ class _FilesScreenState extends State<FilesScreen> {
   }
 
   void _navigateUp() {
+    // Prevent going beyond root. Length 1 means we are at "Internal Storage" or "SD Card".
     if (_pathStack.length <= 1) {
-      if (widget.initialPath != null) { Navigator.pop(context); } else {
-        setState(() { _atRoot = true; _pathStack = []; _currentRootPath = null; _files = []; });
-      }
+      if (widget.initialPath != null) { Navigator.pop(context); } 
+      else { setState(() { _atRoot = true; _pathStack = []; _currentRootPath = null; _files = []; }); }
       return;
     }
     _pathStack.removeLast();
@@ -118,17 +125,65 @@ class _FilesScreenState extends State<FilesScreen> {
     setState(() { _selectedItems.contains(item.path) ? _selectedItems.remove(item.path) : _selectedItems.add(item.path); });
   }
 
-  void _performSelectionAction(String action) {
+  void _setClipboard(ClipboardAction action, List<String> items) {
     setState(() {
-      if (action == 'selectAll') { _selectedItems.addAll(_files.map((f) => f.path)); }
-      else if (action == 'deselectAll') { _selectedItems.clear(); }
-      else if (action == 'invert') {
-        final all = _files.map((f) => f.path).toSet();
-        final newSelected = all.difference(_selectedItems);
-        _selectedItems.clear();
-        _selectedItems.addAll(newSelected);
-      }
+      _clipboardAction = action;
+      _clipboardItems = items;
+      _isSelectionMode = false;
+      _selectedItems.clear();
     });
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${items.length} item(s) ready to ${action.name}. Navigate to destination and tap the FAB.')));
+  }
+
+  Future<void> _executeClipboardAction() async {
+    final destPath = _buildCurrentPath();
+    final action = _clipboardAction;
+    final items = List<String>.from(_clipboardItems);
+
+    setState(() { _clipboardAction = ClipboardAction.none; _clipboardItems.clear(); });
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => OperationProgressDialog(
+        title: action == ClipboardAction.copy ? 'Copying Files' : action == ClipboardAction.cut ? 'Moving Files' : 'Extracting Archive',
+        operation: (updateProgress) async {
+          if (action == ClipboardAction.copy) {
+            await FileSystemService.copyItems(items, destPath, onProgress: updateProgress);
+          } else if (action == ClipboardAction.cut) {
+            await FileSystemService.moveItems(items, destPath, onProgress: updateProgress);
+          } else if (action == ClipboardAction.extract) {
+            await FileSystemService.extractArchive(items.first, destPath, onProgress: updateProgress);
+          }
+        },
+      ),
+    ).then((_) => _loadDirectory(_buildCurrentPath()));
+  }
+
+  Future<void> _confirmBulkDelete(BuildContext context, List<String> paths) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => DeleteConfirmDialog(itemCount: paths.length, primaryColor: AppTheme.getPrimaryColor(context.read<AppSettings>().theme)),
+    );
+    if (confirm == true) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => OperationProgressDialog(
+            title: 'Deleting Files',
+            operation: (updateProgress) async {
+              await FileSystemService.deleteItems(paths, onProgress: updateProgress);
+            },
+          ),
+        ).then((_) {
+          if (mounted) {
+            setState(() { _isSelectionMode = false; _selectedItems.clear(); });
+            _loadDirectory(_buildCurrentPath());
+          }
+        });
+      }
+    }
   }
 
   @override
@@ -221,7 +276,7 @@ class _FilesScreenState extends State<FilesScreen> {
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert_rounded),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            onSelected: (v) { if (v == 'select') _toggleSelectionMode(); if (v == 'sort') {} },
+            onSelected: (v) { if (v == 'select') _toggleSelectionMode(); if (v == 'sort') _showSortDialog(context, primaryColor); },
             itemBuilder: (_) => [ if (!_atRoot) const PopupMenuItem(value: 'select', child: Text('Selection mode')), const PopupMenuItem(value: 'sort', child: Text('Sort by')) ],
           ),
         ],
@@ -232,6 +287,8 @@ class _FilesScreenState extends State<FilesScreen> {
   void _showSelectionBottomSheet(BuildContext context, Color primaryColor) {
     final selectedItems = _files.where((f) => _selectedItems.contains(f.path)).toList();
     final isSingle = selectedItems.length == 1;
+    final selectedPaths = selectedItems.map((e) => e.path).toList();
+    
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -245,13 +302,13 @@ class _FilesScreenState extends State<FilesScreen> {
             const SizedBox(height: 16),
             if (isSingle) ...[
               ListTile(leading: const Icon(Icons.open_in_new), title: const Text('Open'), onTap: () { Navigator.pop(context); _openFile(selectedItems.first, context); }),
-              if (selectedItems.first.isArchive) ListTile(leading: const Icon(Icons.unarchive_outlined), title: const Text('Extract Here'), onTap: () { Navigator.pop(context); _extractArchive(selectedItems.first.path); }),
+              if (selectedItems.first.isArchive) ListTile(leading: const Icon(Icons.unarchive_outlined), title: const Text('Extract Here'), onTap: () { Navigator.pop(context); _setClipboard(ClipboardAction.extract, selectedPaths); }),
               ListTile(leading: const Icon(Icons.edit_outlined), title: const Text('Rename'), onTap: () { Navigator.pop(context); _showRenameModal(context, selectedItems.first, primaryColor); }),
             ],
-            ListTile(leading: const Icon(Icons.content_copy), title: const Text('Copy'), onTap: () { Navigator.pop(context); }),
-            ListTile(leading: const Icon(Icons.content_cut), title: const Text('Cut'), onTap: () { Navigator.pop(context); }),
-            ListTile(leading: const Icon(Icons.folder_zip_outlined), title: const Text('Compress'), onTap: () { Navigator.pop(context); }),
-            ListTile(leading: const Icon(Icons.delete_outline, color: Colors.red), title: const Text('Delete', style: TextStyle(color: Colors.red)), onTap: () { Navigator.pop(context); _confirmBulkDelete(context); }),
+            ListTile(leading: const Icon(Icons.content_copy), title: const Text('Copy'), onTap: () { Navigator.pop(context); _setClipboard(ClipboardAction.copy, selectedPaths); }),
+            ListTile(leading: const Icon(Icons.content_cut), title: const Text('Cut'), onTap: () { Navigator.pop(context); _setClipboard(ClipboardAction.cut, selectedPaths); }),
+            ListTile(leading: const Icon(Icons.folder_zip_outlined), title: const Text('Compress'), onTap: () { Navigator.pop(context); _showCompressModal(context, selectedPaths, selectedItems.first.name, primaryColor); }),
+            ListTile(leading: const Icon(Icons.delete_outline, color: Colors.red), title: const Text('Delete', style: TextStyle(color: Colors.red)), onTap: () { Navigator.pop(context); _confirmBulkDelete(context, selectedPaths); }),
           ],
         ),
       ),
@@ -267,30 +324,24 @@ class _FilesScreenState extends State<FilesScreen> {
           Expanded(child: Text('${_selectedItems.length} selected', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800))),
           PopupMenuButton<String>(
             icon: const Icon(Icons.checklist_rounded), iconColor: primaryColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            onSelected: _performSelectionAction,
+            onSelected: (action) {
+              setState(() {
+                if (action == 'selectAll') { _selectedItems.addAll(_files.map((f) => f.path)); }
+                else if (action == 'deselectAll') { _selectedItems.clear(); }
+                else if (action == 'invert') {
+                  final all = _files.map((f) => f.path).toSet();
+                  final newSelected = all.difference(_selectedItems);
+                  _selectedItems.clear();
+                  _selectedItems.addAll(newSelected);
+                }
+              });
+            },
             itemBuilder: (_) => [ const PopupMenuItem(value: 'selectAll', child: Text('Select All')), const PopupMenuItem(value: 'deselectAll', child: Text('Deselect All')), const PopupMenuItem(value: 'invert', child: Text('Invert Selection')) ],
           ),
           if (_selectedItems.isNotEmpty) IconButton(icon: const Icon(Icons.more_vert_rounded), onPressed: () => _showSelectionBottomSheet(context, primaryColor)),
         ],
       ),
     );
-  }
-
-  Future<void> _confirmBulkDelete(BuildContext context) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Delete selected'),
-        content: Text('Delete ${_selectedItems.length} items? This cannot be undone.'),
-        actions: [ TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), style: TextButton.styleFrom(foregroundColor: Colors.red), child: const Text('Delete')) ],
-      ),
-    );
-    if (confirm == true) {
-      for (final path in _selectedItems) { await FileSystemService.deleteItem(path); }
-      _toggleSelectionMode();
-      _loadDirectory(_buildCurrentPath());
-    }
   }
 
   Widget _buildStorageList(BuildContext context, Color primaryColor, bool isDark) {
@@ -376,39 +427,36 @@ class _FilesScreenState extends State<FilesScreen> {
       builder: (_) => FileBottomSheet(
         item: item, primaryColor: primaryColor,
         onOpen: () { Navigator.pop(context); _openFile(item, context); },
-        onCompress: () { Navigator.pop(context); _showCompressModal(context, item, primaryColor); },
+        onCompress: () { Navigator.pop(context); _showCompressModal(context, [item.path], item.name, primaryColor); },
         onRename: () { Navigator.pop(context); _showRenameModal(context, item, primaryColor); },
-        onDelete: () { Navigator.pop(context); _deleteItem(context, item); },
+        onDelete: () { Navigator.pop(context); _confirmBulkDelete(context, [item.path]); },
         onDetails: () { Navigator.pop(context); _showDetails(context, item, primaryColor); },
         onShare: () { Navigator.pop(context); _shareItem(item); },
-        onCopy: () { Navigator.pop(context); }, onCut: () { Navigator.pop(context); },
+        onCopy: () { Navigator.pop(context); _setClipboard(ClipboardAction.copy, [item.path]); }, 
+        onCut: () { Navigator.pop(context); _setClipboard(ClipboardAction.cut, [item.path]); },
         currentPath: _buildCurrentPath(),
       ),
     );
   }
 
-  Future<void> _deleteItem(BuildContext context, FileItem item) async {
-    final success = await FileSystemService.deleteItem(item.path);
-    if (mounted && success) _loadDirectory(_buildCurrentPath());
-  }
-
-  void _showCompressModal(BuildContext context, FileItem item, Color primaryColor) {
+  void _showCompressModal(BuildContext context, List<String> items, String defaultName, Color primaryColor) {
     showDialog(
       context: context,
       builder: (_) => CompressModal(
-        itemName: item.name, primaryColor: primaryColor,
+        itemName: defaultName, primaryColor: primaryColor,
         onCompress: (archiveName, format, password) async {
           Navigator.pop(context);
-          await FileSystemService.compressItems([item.path], '$_buildCurrentPath()/$archiveName');
-          _loadDirectory(_buildCurrentPath());
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => OperationProgressDialog(
+              title: 'Compressing to $archiveName',
+              operation: (update) async { await FileSystemService.compressItems(items, '$_buildCurrentPath()/$archiveName', onProgress: update); },
+            ),
+          ).then((_) => _loadDirectory(_buildCurrentPath()));
         },
       ),
     );
-  }
-
-  void _extractArchive(String path) async {
-    await FileSystemService.extractArchive(path, _buildCurrentPath());
-    _loadDirectory(_buildCurrentPath());
   }
 
   void _showRenameModal(BuildContext context, FileItem item, Color primaryColor) {
@@ -422,8 +470,57 @@ class _FilesScreenState extends State<FilesScreen> {
   void _shareItem(FileItem item) { Share.shareXFiles([XFile(item.path)], text: item.name); }
   
   Widget _buildFAB(BuildContext context, Color primaryColor) {
+    if (_clipboardAction != ClipboardAction.none) {
+      return FloatingActionButton.extended(
+        onPressed: _executeClipboardAction,
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
+        icon: Icon(_clipboardAction == ClipboardAction.extract ? Icons.unarchive_rounded : Icons.subdirectory_arrow_left_rounded),
+        label: Text(_clipboardAction == ClipboardAction.extract ? 'Extract Here' : 'Paste Here', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+      );
+    }
+
     return FloatingActionButton(
-      onPressed: () {}, backgroundColor: primaryColor, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)), child: const Icon(Icons.add_rounded, size: 28),
+      onPressed: () => _showCreateOptions(context, primaryColor),
+      backgroundColor: primaryColor, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)), child: const Icon(Icons.add_rounded, size: 28),
+    );
+  }
+
+  void _showCreateOptions(BuildContext context, Color primaryColor) {
+    showModalBottomSheet(
+      context: context, backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: const BorderRadius.vertical(top: Radius.circular(24))),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: Container(width: 44, height: 44, decoration: BoxDecoration(color: primaryColor.withOpacity(0.12), borderRadius: BorderRadius.circular(12)), child: Icon(Icons.create_new_folder_rounded, color: primaryColor)),
+              title: Text('New Folder', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+              onTap: () { Navigator.pop(context); showDialog(context: context, builder: (_) => CreateFolderDialog(primaryColor: primaryColor, onCreate: (name) async { Navigator.pop(context); final success = await FileSystemService.createFolder(_buildCurrentPath(), name); if (mounted && success) _loadDirectory(_buildCurrentPath()); })); },
+            ),
+            ListTile(
+              leading: Container(width: 44, height: 44, decoration: BoxDecoration(color: primaryColor.withOpacity(0.12), borderRadius: BorderRadius.circular(12)), child: Icon(Icons.note_add_rounded, color: primaryColor)),
+              title: Text('New File', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+              onTap: () { Navigator.pop(context); showDialog(context: context, builder: (_) => CreateFileDialog(primaryColor: primaryColor, onCreate: (name) async { Navigator.pop(context); final success = await FileSystemService.createFile(_buildCurrentPath(), name); if (mounted && success) _loadDirectory(_buildCurrentPath()); })); },
+            ),
+            SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSortDialog(BuildContext context, Color primaryColor) {
+    showModalBottomSheet(
+      context: context, backgroundColor: Colors.transparent,
+      builder: (_) => _SortSheet(
+        currentSortBy: _sortBy, currentOrder: _sortOrder, primaryColor: primaryColor,
+        onSortChanged: (by, order) { setState(() { _sortBy = by; _sortOrder = order; }); _loadDirectory(_buildCurrentPath()); },
+      ),
     );
   }
 }
@@ -453,6 +550,40 @@ class _StorageDeviceCard extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SortSheet extends StatefulWidget {
+  final SortBy currentSortBy; final SortOrder currentOrder; final Color primaryColor; final Function(SortBy, SortOrder) onSortChanged;
+  const _SortSheet({required this.currentSortBy, required this.currentOrder, required this.primaryColor, required this.onSortChanged});
+  @override
+  State<_SortSheet> createState() => _SortSheetState();
+}
+
+class _SortSheetState extends State<_SortSheet> {
+  late SortBy _sortBy; late SortOrder _sortOrder;
+  @override
+  void initState() { super.initState(); _sortBy = widget.currentSortBy; _sortOrder = widget.currentOrder; }
+  @override
+  Widget build(BuildContext context) {
+    final opts = [(SortBy.name, 'Name', Icons.sort_by_alpha_rounded), (SortBy.size, 'Size', Icons.format_size_rounded), (SortBy.date, 'Date', Icons.calendar_today_rounded), (SortBy.type, 'Type', Icons.category_rounded)];
+    return Container(
+      padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: const BorderRadius.vertical(top: Radius.circular(24))),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(2)))), const SizedBox(height: 16),
+          Text('Sort By', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800)), const SizedBox(height: 12),
+          ...opts.map((o) => RadioListTile<SortBy>(value: o.$1, groupValue: _sortBy, title: Row(children: [Icon(o.$3, size: 18, color: widget.primaryColor), const SizedBox(width: 10), Text(o.$2, style: GoogleFonts.inter(fontWeight: FontWeight.w600))]), activeColor: widget.primaryColor, onChanged: (v) => setState(() => _sortBy = v!))),
+          const Divider(height: 16),
+          RadioListTile<SortOrder>(value: SortOrder.asc, groupValue: _sortOrder, title: const Row(children: [Icon(Icons.arrow_upward_rounded, size: 18), SizedBox(width: 10), Text('Ascending')]), activeColor: widget.primaryColor, onChanged: (v) => setState(() => _sortOrder = v!)),
+          RadioListTile<SortOrder>(value: SortOrder.desc, groupValue: _sortOrder, title: const Row(children: [Icon(Icons.arrow_downward_rounded, size: 18), SizedBox(width: 10), Text('Descending')]), activeColor: widget.primaryColor, onChanged: (v) => setState(() => _sortOrder = v!)),
+          const SizedBox(height: 8),
+          SizedBox(width: double.infinity, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: widget.primaryColor, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), padding: const EdgeInsets.symmetric(vertical: 14)), onPressed: () { Navigator.pop(context); widget.onSortChanged(_sortBy, _sortOrder); }, child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.w700)))),
+          SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
+        ],
       ),
     );
   }
