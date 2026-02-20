@@ -51,12 +51,19 @@ class FileListView extends ConsumerWidget {
         return InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: () {
-            if (item.isFolder) {
-              ref.read(directoryProvider.notifier).navigateTo(item.name);
-            } else {
-              // Trigger preview or open action
+           if (item.isFolder) {
+            ref.read(directoryProvider.notifier).navigateTo(item.name);
+           } else {
+          // Navigate to the Preview Screen
+             Navigator.push(
+              context,
+              MaterialPageRoute(
+              builder: (context) => PreviewScreen(node: item),
+                ),
+              );
             }
-          },
+           },
+
   
           onLongPress: () {
            ActionBottomSheet.show(context, item);
