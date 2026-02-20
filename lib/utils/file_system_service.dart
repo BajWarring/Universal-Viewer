@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:mime/mime.dart';
 import 'package:path/path.dart' as p;
 import 'package:intl/intl.dart';
+import 'package:archive/archive_io.dart';
 
 enum FileItemType { folder, file }
 enum SortBy { name, size, date, type }
@@ -14,22 +15,14 @@ class FileItem {
   final FileItemType type;
   final int size;
   final DateTime modified;
-  final int itemCount; // for folders
+  final int itemCount;
   final String? mimeType;
 
-  FileItem({
-    required this.name,
-    required this.path,
-    required this.type,
-    required this.size,
-    required this.modified,
-    this.itemCount = 0,
-    this.mimeType,
-  });
+  FileItem({required this.name, required this.path, required this.type, required this.size, required this.modified, this.itemCount = 0, this.mimeType});
 
   bool get isHidden => name.startsWith('.');
   bool get isFolder => type == FileItemType.folder;
-  bool get isArchive => ['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2', '.xz', '.tgz'].contains(ext.toLowerCase());
+  bool get isArchive => ['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2'].contains(ext.toLowerCase());
   bool get isImage => ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml'].contains(mimeType);
   bool get isVideo => mimeType?.startsWith('video/') ?? false;
   bool get isAudio => mimeType?.startsWith('audio/') ?? false;
@@ -38,7 +31,6 @@ class FileItem {
   bool get isApk => ext.toLowerCase() == '.apk';
 
   String get ext => isFolder ? '' : p.extension(name);
-
   IconData get icon {
     if (isFolder) return Icons.folder_rounded;
     final e = ext.toLowerCase();
@@ -78,16 +70,10 @@ class FileItem {
 }
 
 class FileSystemService {
-  static Future<List<FileItem>> listDirectory(
-    String dirPath, {
-    bool showHidden = false,
-    SortBy sortBy = SortBy.name,
-    SortOrder sortOrder = SortOrder.asc,
-  }) async {
+  static Future<List<FileItem>> listDirectory(String dirPath, {bool showHidden = false, SortBy sortBy = SortBy.name, SortOrder sortOrder = SortOrder.asc}) async {
     try {
       final dir = Directory(dirPath);
       if (!await dir.exists()) return [];
-
       final List<FileItem> items = [];
       await for (final entity in dir.list(followLinks: false)) {
         try {
@@ -97,61 +83,32 @@ class FileSystemService {
 
           if (entity is Directory) {
             int count = 0;
-            try {
-              count = await dir.list().length;
-            } catch (_) {}
-            items.add(FileItem(
-              name: name,
-              path: entity.path,
-              type: FileItemType.folder,
-              size: 0,
-              modified: stat.modified,
-              itemCount: count,
-            ));
+            try { count = await dir.list().length; } catch (_) {}
+            items.add(FileItem(name: name, path: entity.path, type: FileItemType.folder, size: 0, modified: stat.modified, itemCount: count));
           } else if (entity is File) {
             final mime = lookupMimeType(entity.path);
-            items.add(FileItem(
-              name: name,
-              path: entity.path,
-              type: FileItemType.file,
-              size: stat.size,
-              modified: stat.modified,
-              mimeType: mime,
-            ));
+            items.add(FileItem(name: name, path: entity.path, type: FileItemType.file, size: stat.size, modified: stat.modified, mimeType: mime));
           }
-        } catch (_) {
-          // Skip inaccessible files
-        }
+        } catch (_) {}
       }
-
       _sort(items, sortBy, sortOrder);
       return items;
-    } catch (e) {
-      return [];
-    }
+    } catch (e) { return []; }
   }
 
   static void _sort(List<FileItem> items, SortBy sortBy, SortOrder order) {
-    // Folders first
     final folders = items.where((i) => i.isFolder).toList();
     final files = items.where((i) => !i.isFolder).toList();
-
     int compare(FileItem a, FileItem b) {
       switch (sortBy) {
-        case SortBy.name:
-          return a.name.toLowerCase().compareTo(b.name.toLowerCase());
-        case SortBy.size:
-          return a.size.compareTo(b.size);
-        case SortBy.date:
-          return a.modified.compareTo(b.modified);
-        case SortBy.type:
-          return a.ext.compareTo(b.ext);
+        case SortBy.name: return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        case SortBy.size: return a.size.compareTo(b.size);
+        case SortBy.date: return a.modified.compareTo(b.modified);
+        case SortBy.type: return a.ext.compareTo(b.ext);
       }
     }
-
     folders.sort((a, b) => order == SortOrder.asc ? compare(a, b) : compare(b, a));
     files.sort((a, b) => order == SortOrder.asc ? compare(a, b) : compare(b, a));
-
     items.clear();
     items.addAll(folders);
     items.addAll(files);
@@ -160,15 +117,9 @@ class FileSystemService {
   static Future<bool> deleteItem(String path) async {
     try {
       final entity = FileSystemEntity.typeSync(path);
-      if (entity == FileSystemEntityType.directory) {
-        await Directory(path).delete(recursive: true);
-      } else {
-        await File(path).delete();
-      }
+      if (entity == FileSystemEntityType.directory) { await Directory(path).delete(recursive: true); } else { await File(path).delete(); }
       return true;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
   static Future<bool> renameItem(String oldPath, String newName) async {
@@ -176,24 +127,13 @@ class FileSystemService {
       final dir = p.dirname(oldPath);
       final newPath = p.join(dir, newName);
       final type = FileSystemEntity.typeSync(oldPath);
-      if (type == FileSystemEntityType.directory) {
-        await Directory(oldPath).rename(newPath);
-      } else {
-        await File(oldPath).rename(newPath);
-      }
+      if (type == FileSystemEntityType.directory) { await Directory(oldPath).rename(newPath); } else { await File(oldPath).rename(newPath); }
       return true;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
   static Future<bool> createFolder(String parentPath, String name) async {
-    try {
-      await Directory(p.join(parentPath, name)).create(recursive: true);
-      return true;
-    } catch (_) {
-      return false;
-    }
+    try { await Directory(p.join(parentPath, name)).create(recursive: true); return true; } catch (_) { return false; }
   }
 
   static Future<bool> copyItem(String srcPath, String destDir) async {
@@ -207,9 +147,7 @@ class FileSystemService {
         await File(srcPath).copy(destPath);
       }
       return true;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
   static Future<void> _copyDirectory(Directory src, Directory dest) async {
@@ -236,12 +174,55 @@ class FileSystemService {
       }
       return true;
     } catch (e) {
-      // Cross-device move: copy then delete
-      if (await copyItem(srcPath, destDir)) {
-        return deleteItem(srcPath);
-      }
+      if (await copyItem(srcPath, destDir)) { return deleteItem(srcPath); }
       return false;
     }
+  }
+
+  static Future<bool> compressItems(List<String> srcPaths, String destPath) async {
+    try {
+      var encoder = ZipFileEncoder();
+      encoder.create(destPath);
+      for (String path in srcPaths) {
+        var stat = await FileStat.stat(path);
+        if (stat.type == FileSystemEntityType.directory) {
+          encoder.addDirectory(Directory(path));
+        } else {
+          encoder.addFile(File(path));
+        }
+      }
+      encoder.close();
+      return true;
+    } catch (e) { return false; }
+  }
+
+  static Future<bool> extractArchive(String archivePath, String destDir) async {
+    try {
+      final bytes = File(archivePath).readAsBytesSync();
+      Archive archive;
+      if (archivePath.toLowerCase().endsWith('.zip')) {
+        archive = ZipDecoder().decodeBytes(bytes);
+      } else if (archivePath.toLowerCase().endsWith('.tar')) {
+        archive = TarDecoder().decodeBytes(bytes);
+      } else if (archivePath.toLowerCase().endsWith('.gz')) {
+        archive = TarDecoder().decodeBytes(GZipDecoder().decodeBytes(bytes));
+      } else {
+        return false;
+      }
+      
+      for (final file in archive) {
+        final filename = file.name;
+        if (file.isFile) {
+          final data = file.content as List<int>;
+          File(p.join(destDir, filename))
+            ..createSync(recursive: true)
+            ..writeAsBytesSync(data);
+        } else {
+          Directory(p.join(destDir, filename)).createSync(recursive: true);
+        }
+      }
+      return true;
+    } catch (e) { return false; }
   }
 
   static String formatSize(int bytes) {
@@ -263,15 +244,9 @@ class FileSystemService {
     return DateFormat('MMM d, yyyy').format(date);
   }
 
-  static Future<List<FileItem>> searchFiles(
-    String rootPath,
-    String query, {
-    bool includeHidden = false,
-    bool recursive = true,
-  }) async {
+  static Future<List<FileItem>> searchFiles(String rootPath, String query, {bool includeHidden = false, bool recursive = true}) async {
     final results = <FileItem>[];
     final q = query.toLowerCase();
-
     Future<void> searchDir(String dirPath) async {
       try {
         final dir = Directory(dirPath);
@@ -281,29 +256,18 @@ class FileSystemService {
           final stat = await entity.stat();
           if (name.toLowerCase().contains(q)) {
             final mime = entity is File ? lookupMimeType(entity.path) : null;
-            results.add(FileItem(
-              name: name,
-              path: entity.path,
-              type: entity is Directory ? FileItemType.folder : FileItemType.file,
-              size: entity is File ? stat.size : 0,
-              modified: stat.modified,
-              mimeType: mime,
-            ));
+            results.add(FileItem(name: name, path: entity.path, type: entity is Directory ? FileItemType.folder : FileItemType.file, size: entity is File ? stat.size : 0, modified: stat.modified, mimeType: mime));
           }
-          if (recursive && entity is Directory) {
-            await searchDir(entity.path);
-          }
+          if (recursive && entity is Directory) { await searchDir(entity.path); }
         }
       } catch (_) {}
     }
-
     await searchDir(rootPath);
     return results;
   }
 
   static Future<List<FileItem>> getRecentFiles(String rootPath, {int limit = 20}) async {
     final all = <FileItem>[];
-
     Future<void> scanDir(String dirPath, int depth) async {
       if (depth > 4) return;
       try {
@@ -314,21 +278,13 @@ class FileSystemService {
             if (name.startsWith('.')) continue;
             final stat = await entity.stat();
             final mime = lookupMimeType(entity.path);
-            all.add(FileItem(
-              name: name,
-              path: entity.path,
-              type: FileItemType.file,
-              size: stat.size,
-              modified: stat.modified,
-              mimeType: mime,
-            ));
+            all.add(FileItem(name: name, path: entity.path, type: FileItemType.file, size: stat.size, modified: stat.modified, mimeType: mime));
           } else if (entity is Directory) {
             await scanDir(entity.path, depth + 1);
           }
         }
       } catch (_) {}
     }
-
     await scanDir(rootPath, 0);
     all.sort((a, b) => b.modified.compareTo(a.modified));
     return all.take(limit).toList();
