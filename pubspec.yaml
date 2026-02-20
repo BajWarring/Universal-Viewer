@@ -28,6 +28,7 @@ dependencies:
   # UI / Animation
   flutter_animate: ^4.5.0
   google_fonts: ^6.2.1
+  reorderable_grid_view: ^2.2.8
 
   # Settings Persistence
   shared_preferences: ^2.3.2
