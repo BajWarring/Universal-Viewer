@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../filesystem/application/directory_notifier.dart';
+import '../../../../filesystem/application/directory_notifier.dart';
+import '../../../search/presentation/search_screen.dart';
 
 class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
   final bool isSelectionMode;
