@@ -34,7 +34,6 @@ class FileBottomSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final color = item.getColor(primaryColor);
-
     final options = _buildOptions();
 
     return Container(
@@ -132,6 +131,7 @@ class FileBottomSheet extends StatelessWidget {
   List<_SheetOption> _buildOptions() {
     if (item.isFolder) {
       return [
+        _SheetOption('Pin to Home', Icons.push_pin_rounded, () {}),
         _SheetOption('Open', Icons.folder_open_rounded, onOpen),
         _SheetOption('Compress', Icons.folder_zip_rounded, onCompress),
         _SheetOption('Copy', Icons.content_copy_rounded, onCopy),
@@ -145,6 +145,18 @@ class FileBottomSheet extends StatelessWidget {
         _SheetOption('View', Icons.visibility_rounded, onOpen),
         _SheetOption('Extract Here', Icons.unarchive_rounded, () {}),
         _SheetOption('Extract To...', Icons.drive_file_move_rounded, () {}),
+        _SheetOption('Compress', Icons.folder_zip_rounded, onCompress),
+        _SheetOption('Copy', Icons.content_copy_rounded, onCopy),
+        _SheetOption('Cut', Icons.content_cut_rounded, onCut),
+        _SheetOption('Rename', Icons.drive_file_rename_outline_rounded, onRename),
+        _SheetOption('Details', Icons.info_outline_rounded, onDetails),
+        _SheetOption('Share', Icons.share_rounded, onShare),
+        _SheetOption('Delete', Icons.delete_outline_rounded, onDelete, isDestructive: true),
+      ];
+    } else if (item.isApk) {
+       return [
+        _SheetOption('Install', Icons.system_update_rounded, onOpen),
+        _SheetOption('View Contents', Icons.visibility_rounded, onOpen),
         _SheetOption('Compress', Icons.folder_zip_rounded, onCompress),
         _SheetOption('Copy', Icons.content_copy_rounded, onCopy),
         _SheetOption('Cut', Icons.content_cut_rounded, onCut),
@@ -211,12 +223,15 @@ class _OptionButton extends StatelessWidget {
             children: [
               Icon(icon, color: color.withOpacity(0.8), size: 18),
               const SizedBox(width: 8),
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: isDestructive ? Colors.red : Theme.of(context).colorScheme.onSurface,
+              Expanded(
+                child: Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isDestructive ? Colors.red : Theme.of(context).colorScheme.onSurface,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
