@@ -23,16 +23,51 @@ class TextPreviewer extends StatelessWidget {
           );
         }
 
+        final content = snapshot.data ?? '';
+        final lineCount = content.split('\n').length;
+        
+        // 1. Strict text style ensures line numbers and code align perfectly
+        const textStyle = TextStyle(
+          fontFamily: 'monospace',
+          fontSize: 13,
+          height: 1.5, // Explicit line height is required for alignment
+        );
+
         return SingleChildScrollView(
-          child: SizedBox(
-            width: double.infinity,
-            child: HighlightView(
-              snapshot.data ?? '',
-              // It is recommended to explicitly pass the language value for performance
-              language: extension, 
-              theme: atomOneDarkTheme,
-              padding: const EdgeInsets.all(16),
-              textStyle: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 2. The Line Numbers Gutter
+                Container(
+                  padding: const EdgeInsets.only(left: 12, right: 12, top: 16, bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                    border: Border(
+                      right: BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.2)),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: List.generate(lineCount, (index) {
+                      return Text(
+                        '${index + 1}',
+                        style: textStyle.copyWith(color: Colors.grey.withOpacity(0.8)),
+                      );
+                    }),
+                  ),
+                ),
+                
+                // 3. The Syntax Highlighted Code
+                HighlightView(
+                  content,
+                  language: extension,
+                  theme: atomOneDarkTheme,
+                  padding: const EdgeInsets.all(16),
+                  textStyle: textStyle,
+                ),
+              ],
             ),
           ),
         );
