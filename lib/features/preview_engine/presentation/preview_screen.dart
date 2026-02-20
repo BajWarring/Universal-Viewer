@@ -1,72 +1,63 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../filesystem/domain/entities/omni_node.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'dart:io';
+import '../../../../filesystem/domain/entities/omni_node.dart';
 import 'renderers/text_previewer.dart';
-import 'renderers/image_previewer.dart';
-
-// Import these once Phase 8 is implemented. 
-import '../../media_player/application/audio_notifier.dart';
 import '../../media_player/presentation/video_player_screen.dart';
+import '../../media_player/application/audio_notifier.dart'; // Ensure you import your AudioNotifier
 
-class PreviewScreen extends ConsumerWidget {
+class PreviewScreen extends StatelessWidget {
   final OmniNode node;
 
   const PreviewScreen({super.key, required this.node});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(node.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(icon: const Icon(Icons.share), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.info_outline), onPressed: () {}),
-        ],
-      ),
-      body: _buildPreviewer(context, ref),
+      appBar: AppBar(title: Text(node.name, style: const TextStyle(fontSize: 16))),
+      body: _buildPreviewer(context),
     );
   }
 
-  Widget _buildPreviewer(BuildContext context, WidgetRef ref) {
-    final ext = node.extension;
+  Widget _buildPreviewer(BuildContext context) {
+    final ext = node.extension.toLowerCase();
     
-    // Text & Code
-    if (['txt', 'md', 'json', 'xml', 'gradle', 'kts', 'java', 'kt', 'html', 'sql', 'csv'].contains(ext)) {
+    // Code, Docs, & Databases
+    if (['txt', 'md', 'json', 'xml', 'gradle', 'kts', 'java', 'kt', 'html', 'sql', 'csv', 'py', 'dart', 'db'].contains(ext)) {
       return TextPreviewer(path: node.path, extension: ext);
     }
     
-    // Images
-    if (['jpeg', 'jpg', 'png', 'svg', 'gif', 'webp'].contains(ext)) {
-      return ImagePreviewer(path: node.path);
+    // SVGs
+    if (ext == 'svg') {
+      return Center(child: SvgPicture.file(File(node.path)));
+    }
+
+    // Standard Images
+    if (['jpeg', 'jpg', 'png', 'gif', 'webp'].contains(ext)) {
+      return Center(child: Image.file(File(node.path)));
     }
     
-    // Audio Routing (Uncomment when AudioNotifier is built)
-    if (['mp3', 'wav', 'flac', 'm4a'].contains(ext)) {
-      // ref.read(audioProvider.notifier).playFile(node);
-      return const Center(child: Text('Playing in Mini Player...')); 
-    }
-
-    // Video Routing (Uncomment when VideoPlayerScreen is built)
+    // Video Routing
     if (['mp4', 'mkv', 'avi', 'webm'].contains(ext)) {
-      // return VideoPlayerScreen(videoNode: node);
-      return const Center(child: Text('Video Player Coming Soon')); 
+      return VideoPlayerScreen(videoNode: node);
     }
 
-    // Documents 
-    if (['pdf'].contains(ext)) {
-      return const Center(child: Text('PDF Renderer and Manipulation Tools here...'));
+    // PDF Routing (Requires flutter_pdfview package later)
+    if (ext == 'pdf') {
+      return const Center(child: Text('PDF Viewer integration pending...'));
     }
 
-    // Fallback View
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.insert_drive_file, size: 64, color: Colors.grey),
-          const SizedBox(height: 16),
-          Text('No built-in preview available for .$ext files'),
-        ],
-      ),
-    );
+    // Archives & APKs (Requires extraction logic)
+    if (['zip', 'rar', '7z', 'apk'].contains(ext)) {
+      return Center(
+        child: ElevatedButton.icon(
+          onPressed: () {}, // TODO: Trigger Archive/APK Viewer
+          icon: const Icon(Icons.folder_zip),
+          label: Text('View inside .$ext'),
+        ),
+      );
+    }
+
+    return const Center(child: Text('Format not supported yet.'));
   }
 }
