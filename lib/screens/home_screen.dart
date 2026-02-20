@@ -8,6 +8,7 @@ import '../utils/app_theme.dart';
 import '../utils/file_system_service.dart';
 import '../utils/storage_service.dart';
 import 'files_screen.dart';
+import 'recent_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,12 +24,8 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _loadingRecent = true;
 
   final List<_PinnedFolder> _pinnedFolders = [
-    _PinnedFolder('Camera', Icons.camera_alt_rounded, '/storage/emulated/0/DCIM/Camera'),
-    _PinnedFolder('Downloads', Icons.download_rounded, '/storage/emulated/0/Download'),
-    _PinnedFolder('WhatsApp', Icons.chat_rounded, '/storage/emulated/0/WhatsApp'),
     _PinnedFolder('Documents', Icons.description_rounded, '/storage/emulated/0/Documents'),
-    _PinnedFolder('Music', Icons.music_note_rounded, '/storage/emulated/0/Music'),
-    _PinnedFolder('Screenshots', Icons.screenshot_rounded, '/storage/emulated/0/Pictures/Screenshots'),
+    _PinnedFolder('Downloads', Icons.download_rounded, '/storage/emulated/0/Download'),
   ];
 
   @override
@@ -152,8 +149,11 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const Spacer(),
               IconButton(
-                icon: Icon(Icons.tune_rounded, size: 18, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
-                onPressed: () {},
+                icon: Icon(Icons.edit_rounded, size: 18, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
+                onPressed: () {
+                  // Push to full screen edit pinned folders (implementable later via Navigator push)
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Edit Pinned Folders pressed')));
+                },
                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                 padding: EdgeInsets.zero,
               ),
@@ -185,9 +185,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navigateToFolder(BuildContext context, String path, String name) {
-    // Navigate to files tab with this path
     Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => FolderViewScreen(path: path, title: name),
+      builder: (_) => FilesScreen(initialPath: path, initialTitle: name),
     ));
   }
 
@@ -256,7 +255,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const Spacer(),
               TextButton(
-                onPressed: () {},
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RecentScreen())),
                 child: Text('View all', style: TextStyle(color: primaryColor, fontSize: 13, fontWeight: FontWeight.w600)),
               ),
             ],
@@ -294,6 +293,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+// ---- Sub-widgets (Fully Restored) ----
+
 class _PinnedFolder {
   final String name;
   final IconData icon;
@@ -322,9 +323,7 @@ class _PinnedFolderCard extends StatelessWidget {
         width: 110,
         height: 100,
         decoration: BoxDecoration(
-          color: isDark
-              ? Colors.white.withOpacity(0.04)
-              : Colors.white,
+          color: isDark ? Colors.white.withOpacity(0.04) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isDark ? Colors.white.withOpacity(0.07) : const Color(0xFFE2E8F0),
@@ -398,7 +397,6 @@ class _StorageCard extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Circular progress
               SizedBox(
                 width: 52,
                 height: 52,
@@ -523,6 +521,9 @@ class _RecentFileCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                IconButton(icon: const Icon(Icons.more_vert_rounded), onPressed: () {
+                   // Hook up to standard bottom sheet 
+                }),
               ],
             ),
           ),
@@ -532,11 +533,8 @@ class _RecentFileCard extends StatelessWidget {
   }
 }
 
-// Search Delegate
 class _FileSearchDelegate extends SearchDelegate<FileItem?> {
   final Color primaryColor;
-  List<FileItem> _results = [];
-  bool _searching = false;
 
   _FileSearchDelegate({required this.primaryColor});
 
