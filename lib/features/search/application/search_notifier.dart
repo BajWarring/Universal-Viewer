@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../filesystem/domain/entities/omni_node.dart';
 import '../../../../filesystem/domain/repositories/file_system_provider.dart';
@@ -7,93 +8,48 @@ class SearchState {
   final bool isSearching;
   final List<OmniNode> results;
   final String query;
-  final bool useRegex;
 
-  const SearchState({
-    this.isSearching = false,
-    this.results = const [],
-    this.query = '',
-    this.useRegex = false,
-  });
-
-  SearchState copyWith({bool? isSearching, List<OmniNode>? results, String? query, bool? useRegex}) {
-    return SearchState(
-      isSearching: isSearching ?? this.isSearching,
-      results: results ?? this.results,
-      query: query ?? this.query,
-      useRegex: useRegex ?? this.useRegex,
-    );
-  }
+  const SearchState({this.isSearching = false, this.results = const [], this.query = ''});
 }
 
 class SearchNotifier extends Notifier<SearchState> {
-  late final FileSystemProvider _provider;
+  Timer? _debounce;
 
   @override
-  SearchState build() {
-    _provider = sl<FileSystemProvider>(instanceName: 'local');
-    return const SearchState();
-  }
+  SearchState build() => const SearchState();
 
-  void toggleRegex(bool value) {
-    state = state.copyWith(useRegex: value);
-    if (state.query.isNotEmpty) performSearch(state.query, '/storage/emulated/0');
-  }
-
-  Future<void> performSearch(String query, String startPath) async {
+  void performSearch(String query, String startPath) {
     if (query.trim().isEmpty) {
-      state = state.copyWith(isSearching: false, results: [], query: '');
+      state = const SearchState();
       return;
     }
 
-    state = state.copyWith(isSearching: true, query: query, results: []);
-    final results = <OmniNode>[];
-    
-    // Determine matching logic (Standard vs Regex)
-    bool matches(String filename) {
-      if (state.useRegex) {
+    // Debouncer: Wait 500ms after the user stops typing before searching
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
+      state = SearchState(isSearching: true, query: query, results: []);
+      
+      final provider = sl<FileSystemProvider>(instanceName: 'local');
+      final newResults = <OmniNode>[];
+      final lowerQuery = query.toLowerCase();
+
+      // Avoid UI freezing by yielding to the event loop
+      Future<void> crawl(String path) async {
         try {
-          final regex = RegExp(query, caseSensitive: false);
-          return regex.hasMatch(filename);
-        } catch (e) {
-          return false; // Invalid regex
-        }
-      }
-      return filename.toLowerCase().contains(query.toLowerCase());
-    }
-
-    // Recursive search function
-    Future<void> searchDirectory(String path) async {
-      try {
-        final nodes = await _provider.listDirectory(path);
-        for (final node in nodes) {
-          // Check against HTML settings for hidden files
-          if (node.isHidden) continue; 
-
-          if (matches(node.name)) {
-            results.add(node);
-            // Update UI incrementally so it doesn't freeze waiting for the whole drive
-            state = state.copyWith(results: List.from(results)); 
+          final nodes = await provider.listDirectory(path);
+          for (final node in nodes) {
+            if (node.name.toLowerCase().contains(lowerQuery)) {
+              newResults.add(node);
+            }
+            if (node.isFolder) await crawl(node.path);
           }
-          // If subfolders setting is enabled, recurse
-          if (node.isFolder) {
-            await searchDirectory(node.path);
-          }
-        }
-      } catch (e) {
-        // Skip inaccessible directories
+        } catch (_) {} // Ignore permission denied folders
       }
-    }
 
-    await searchDirectory(startPath);
-    state = state.copyWith(isSearching: false);
-  }
-
-  void clearSearch() {
-    state = const SearchState();
+      await crawl(startPath);
+      // Update state ONCE at the end, preventing the "buzzing" loop
+      state = SearchState(isSearching: false, query: query, results: newResults);
+    });
   }
 }
-
-final searchProvider = NotifierProvider<SearchNotifier, SearchState>(() {
-  return SearchNotifier();
-});
+final searchProvider = NotifierProvider<SearchNotifier, SearchState>(() => SearchNotifier());
