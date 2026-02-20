@@ -23,6 +23,12 @@ dependencies:
   google_fonts: ^6.2.1
   flutter_highlight: ^0.7.0
 
+  # Media Players (Phase 8)
+  just_audio: ^0.9.36
+  media_kit: ^1.1.11
+  media_kit_video: ^1.2.5
+  media_kit_libs_video: ^1.5.0 # Required for video rendering on Android
+
 dev_dependencies:
   flutter_lints: ^4.0.0
 
