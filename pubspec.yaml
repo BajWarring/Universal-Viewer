@@ -15,19 +15,17 @@ dependencies:
   # State Management & DI
   flutter_riverpod: ^2.5.1
   get_it: ^7.6.4
-
-  # Navigation
   go_router: ^13.2.0
 
   # Theming & UI
   google_fonts: ^6.2.1
   flutter_highlight: ^0.7.0
 
-  # Media Players (Phase 8)
+  # Media Players (Verified Versions)
   just_audio: ^0.9.36
   media_kit: ^1.1.11
-  media_kit_video: ^1.2.5
-  media_kit_libs_video: ^1.5.0 # Required for video rendering on Android
+  media_kit_video: ^1.2.4
+  media_kit_libs_video: ^1.0.7 
 
 dev_dependencies:
   flutter_lints: ^4.0.0
