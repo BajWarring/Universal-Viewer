@@ -22,8 +22,8 @@ class FileItem {
 
   bool get isHidden => name.startsWith('.');
   bool get isFolder => type == FileItemType.folder;
-  bool get isArchive => ['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2'].contains(ext.toLowerCase());
-  bool get isImage => ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml'].contains(mimeType);
+  bool get isArchive => ['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2', '.xz'].contains(ext.toLowerCase());
+  bool get isImage => ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'].contains(mimeType);
   bool get isVideo => mimeType?.startsWith('video/') ?? false;
   bool get isAudio => mimeType?.startsWith('audio/') ?? false;
   bool get isPdf => mimeType == 'application/pdf';
@@ -34,37 +34,27 @@ class FileItem {
   IconData get icon {
     if (isFolder) return Icons.folder_rounded;
     final e = ext.toLowerCase();
-    if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.heic', '.svg'].contains(e)) return Icons.image_rounded;
-    if (['.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.webm', '.m4v', '.mpg'].contains(e)) return Icons.movie_rounded;
-    if (['.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a', '.opus'].contains(e)) return Icons.music_note_rounded;
+    if (['.jpg', '.jpeg', '.png', '.gif', '.webp'].contains(e)) return Icons.image_rounded;
+    if (['.mp4', '.mkv', '.avi', '.mov'].contains(e)) return Icons.movie_rounded;
+    if (['.mp3', '.wav', '.flac', '.aac'].contains(e)) return Icons.music_note_rounded;
     if (['.pdf'].contains(e)) return Icons.picture_as_pdf_rounded;
-    if (['.doc', '.docx', '.odt'].contains(e)) return Icons.description_rounded;
-    if (['.xls', '.xlsx', '.ods', '.csv'].contains(e)) return Icons.table_chart_rounded;
-    if (['.ppt', '.pptx', '.odp'].contains(e)) return Icons.slideshow_rounded;
-    if (['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2', '.xz'].contains(e)) return Icons.folder_zip_rounded;
+    if (['.zip', '.rar', '.7z', '.tar', '.gz'].contains(e)) return Icons.folder_zip_rounded;
     if (['.apk'].contains(e)) return Icons.android_rounded;
     if (['.txt', '.md', '.log'].contains(e)) return Icons.text_snippet_rounded;
-    if (['.py', '.js', '.ts', '.dart', '.java', '.cpp', '.c', '.h', '.go', '.rs', '.php', '.rb', '.swift', '.kt'].contains(e)) return Icons.code_rounded;
-    if (['.json', '.xml', '.yaml', '.yml', '.html', '.css', '.sh'].contains(e)) return Icons.data_object_rounded;
-    if (['.ttf', '.otf', '.woff', '.woff2'].contains(e)) return Icons.font_download_rounded;
-    if (['.exe', '.msi', '.dmg', '.deb', '.rpm'].contains(e)) return Icons.settings_applications_rounded;
+    if (['.py', '.js', '.ts', '.dart', '.java', '.html', '.css', '.json', '.xml'].contains(e)) return Icons.code_rounded;
     return Icons.insert_drive_file_rounded;
   }
 
   Color getColor(Color primary) {
     if (isFolder) return primary;
     final e = ext.toLowerCase();
-    if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.heic', '.svg'].contains(e)) return const Color(0xFF0EA5E9);
-    if (['.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.webm'].contains(e)) return const Color(0xFFEC4899);
-    if (['.mp3', '.wav', '.flac', '.aac', '.ogg', '.m4a'].contains(e)) return const Color(0xFFA855F7);
+    if (['.jpg', '.jpeg', '.png', '.gif', '.webp'].contains(e)) return const Color(0xFF0EA5E9);
+    if (['.mp4', '.mkv', '.avi', '.mov'].contains(e)) return const Color(0xFFEC4899);
+    if (['.mp3', '.wav', '.flac'].contains(e)) return const Color(0xFFA855F7);
     if (['.pdf'].contains(e)) return const Color(0xFFEF4444);
-    if (['.doc', '.docx', '.odt'].contains(e)) return const Color(0xFF2B579A);
-    if (['.xls', '.xlsx', '.ods', '.csv'].contains(e)) return const Color(0xFF217346);
-    if (['.ppt', '.pptx', '.odp'].contains(e)) return const Color(0xFFD24726);
-    if (['.zip', '.rar', '.7z', '.tar', '.gz'].contains(e)) return const Color(0xFFF59E0B);
+    if (['.zip', '.rar', '.7z', '.tar'].contains(e)) return const Color(0xFFF59E0B);
     if (['.apk'].contains(e)) return const Color(0xFF22C55E);
     if (['.txt', '.md', '.log'].contains(e)) return const Color(0xFF6366F1);
-    if (['.py', '.js', '.ts', '.dart', '.java', '.cpp', '.c'].contains(e)) return const Color(0xFF10B981);
     return const Color(0xFF64748B);
   }
 }
@@ -114,12 +104,12 @@ class FileSystemService {
     items.addAll(files);
   }
 
-  static Future<bool> deleteItem(String path) async {
-    try {
-      final entity = FileSystemEntity.typeSync(path);
-      if (entity == FileSystemEntityType.directory) { await Directory(path).delete(recursive: true); } else { await File(path).delete(); }
-      return true;
-    } catch (_) { return false; }
+  static Future<bool> createFolder(String parentPath, String name) async {
+    try { await Directory(p.join(parentPath, name)).create(recursive: true); return true; } catch (_) { return false; }
+  }
+
+  static Future<bool> createFile(String parentPath, String name) async {
+    try { await File(p.join(parentPath, name)).create(recursive: true); return true; } catch (_) { return false; }
   }
 
   static Future<bool> renameItem(String oldPath, String newName) async {
@@ -132,20 +122,38 @@ class FileSystemService {
     } catch (_) { return false; }
   }
 
-  static Future<bool> createFolder(String parentPath, String name) async {
-    try { await Directory(p.join(parentPath, name)).create(recursive: true); return true; } catch (_) { return false; }
+  // Operations with Progress
+  static Future<bool> deleteItems(List<String> paths, {Function(double, String)? onProgress}) async {
+    try {
+      int total = paths.length;
+      for (int i = 0; i < total; i++) {
+        String path = paths[i];
+        if (onProgress != null) onProgress(i / total, p.basename(path));
+        final entity = FileSystemEntity.typeSync(path);
+        if (entity == FileSystemEntityType.directory) { await Directory(path).delete(recursive: true); } else { await File(path).delete(); }
+      }
+      if (onProgress != null) onProgress(1.0, 'Done');
+      return true;
+    } catch (_) { return false; }
   }
 
-  static Future<bool> copyItem(String srcPath, String destDir) async {
+  static Future<bool> copyItems(List<String> srcPaths, String destDir, {Function(double, String)? onProgress}) async {
     try {
-      final name = p.basename(srcPath);
-      final destPath = p.join(destDir, name);
-      final type = FileSystemEntity.typeSync(srcPath);
-      if (type == FileSystemEntityType.directory) {
-        await _copyDirectory(Directory(srcPath), Directory(destPath));
-      } else {
-        await File(srcPath).copy(destPath);
+      int total = srcPaths.length;
+      for (int i = 0; i < total; i++) {
+        String path = srcPaths[i];
+        String name = p.basename(path);
+        if (onProgress != null) onProgress(i / total, name);
+        
+        final destPath = p.join(destDir, name);
+        final type = FileSystemEntity.typeSync(path);
+        if (type == FileSystemEntityType.directory) {
+          await _copyDirectory(Directory(path), Directory(destPath));
+        } else {
+          await File(path).copy(destPath);
+        }
       }
+      if (onProgress != null) onProgress(1.0, 'Done');
       return true;
     } catch (_) { return false; }
   }
@@ -154,36 +162,47 @@ class FileSystemService {
     await dest.create(recursive: true);
     await for (final entity in src.list()) {
       final target = p.join(dest.path, p.basename(entity.path));
-      if (entity is Directory) {
-        await _copyDirectory(entity, Directory(target));
-      } else if (entity is File) {
-        await entity.copy(target);
-      }
+      if (entity is Directory) { await _copyDirectory(entity, Directory(target)); } 
+      else if (entity is File) { await entity.copy(target); }
     }
   }
 
-  static Future<bool> moveItem(String srcPath, String destDir) async {
+  static Future<bool> moveItems(List<String> srcPaths, String destDir, {Function(double, String)? onProgress}) async {
     try {
-      final name = p.basename(srcPath);
-      final destPath = p.join(destDir, name);
-      final type = FileSystemEntity.typeSync(srcPath);
-      if (type == FileSystemEntityType.directory) {
-        await Directory(srcPath).rename(destPath);
-      } else {
-        await File(srcPath).rename(destPath);
+      int total = srcPaths.length;
+      for (int i = 0; i < total; i++) {
+        String path = srcPaths[i];
+        String name = p.basename(path);
+        if (onProgress != null) onProgress(i / total, name);
+        
+        final destPath = p.join(destDir, name);
+        final type = FileSystemEntity.typeSync(path);
+        try {
+          if (type == FileSystemEntityType.directory) { await Directory(path).rename(destPath); } else { await File(path).rename(destPath); }
+        } catch (e) {
+          // Fallback if cross-device
+          if (type == FileSystemEntityType.directory) {
+            await _copyDirectory(Directory(path), Directory(destPath));
+            await Directory(path).delete(recursive: true);
+          } else {
+            await File(path).copy(destPath);
+            await File(path).delete();
+          }
+        }
       }
+      if (onProgress != null) onProgress(1.0, 'Done');
       return true;
-    } catch (e) {
-      if (await copyItem(srcPath, destDir)) { return deleteItem(srcPath); }
-      return false;
-    }
+    } catch (_) { return false; }
   }
 
-  static Future<bool> compressItems(List<String> srcPaths, String destPath) async {
+  static Future<bool> compressItems(List<String> srcPaths, String destPath, {Function(double, String)? onProgress}) async {
     try {
       var encoder = ZipFileEncoder();
       encoder.create(destPath);
-      for (String path in srcPaths) {
+      int total = srcPaths.length;
+      for (int i = 0; i < total; i++) {
+        String path = srcPaths[i];
+        if (onProgress != null) onProgress(i / total, p.basename(path));
         var stat = await FileStat.stat(path);
         if (stat.type == FileSystemEntityType.directory) {
           encoder.addDirectory(Directory(path));
@@ -192,35 +211,39 @@ class FileSystemService {
         }
       }
       encoder.close();
+      if (onProgress != null) onProgress(1.0, 'Done');
       return true;
     } catch (e) { return false; }
   }
 
-  static Future<bool> extractArchive(String archivePath, String destDir) async {
+  static Future<bool> extractArchive(String archivePath, String destDir, {Function(double, String)? onProgress}) async {
     try {
+      if (onProgress != null) onProgress(0.1, 'Reading Archive...');
       final bytes = File(archivePath).readAsBytesSync();
       Archive archive;
       if (archivePath.toLowerCase().endsWith('.zip')) {
         archive = ZipDecoder().decodeBytes(bytes);
       } else if (archivePath.toLowerCase().endsWith('.tar')) {
         archive = TarDecoder().decodeBytes(bytes);
-      } else if (archivePath.toLowerCase().endsWith('.gz')) {
-        archive = TarDecoder().decodeBytes(GZipDecoder().decodeBytes(bytes));
       } else {
         return false;
       }
       
+      int total = archive.length;
+      int current = 0;
       for (final file in archive) {
+        current++;
+        if (onProgress != null && current % 5 == 0) onProgress(current / total, file.name);
+        
         final filename = file.name;
         if (file.isFile) {
           final data = file.content as List<int>;
-          File(p.join(destDir, filename))
-            ..createSync(recursive: true)
-            ..writeAsBytesSync(data);
+          File(p.join(destDir, filename))..createSync(recursive: true)..writeAsBytesSync(data);
         } else {
           Directory(p.join(destDir, filename)).createSync(recursive: true);
         }
       }
+      if (onProgress != null) onProgress(1.0, 'Done');
       return true;
     } catch (e) { return false; }
   }
