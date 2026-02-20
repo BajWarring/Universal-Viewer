@@ -22,6 +22,9 @@ dependencies:
   # Theming & UI
   dynamic_color: ^1.6.3
   google_fonts: ^6.2.1
+
+dependacy_overrides:
+ dynamic_color: ^1.6.3
   
 dev_dependencies:
   flutter_test:
