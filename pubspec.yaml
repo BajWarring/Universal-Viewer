@@ -23,7 +23,7 @@ dependencies:
   dynamic_color: ^1.6.3
   google_fonts: ^6.2.1
 
-dependacy_overrides:
+dependency_overrides:
  dynamic_color: ^1.6.3
   
 dev_dependencies:
