@@ -1,83 +1,73 @@
-import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path/path.dart' as path_utils; // Requires the 'path' package
-import '../../../filesystem/application/directory_notifier.dart';
+import '../../../../filesystem/domain/entities/omni_node.dart';
 
-class FileOpState {
-  final bool isProcessing;
-  final String? errorMessage;
-  
-  const FileOpState({this.isProcessing = false, this.errorMessage});
+enum FileOpType { none, copy, cut, extract }
+
+class FileOperationState {
+  final Set<OmniNode> selectedNodes;
+  final List<OmniNode> clipboard;
+  final FileOpType operation;
+
+  const FileOperationState({
+    this.selectedNodes = const {},
+    this.clipboard = const [],
+    this.operation = FileOpType.none,
+  });
+
+  FileOperationState copyWith({
+    Set<OmniNode>? selectedNodes,
+    List<OmniNode>? clipboard,
+    FileOpType? operation,
+  }) {
+    return FileOperationState(
+      selectedNodes: selectedNodes ?? this.selectedNodes,
+      clipboard: clipboard ?? this.clipboard,
+      operation: operation ?? this.operation,
+    );
+  }
 }
 
-class FileOperationNotifier extends Notifier<FileOpState> {
+class FileOperationNotifier extends Notifier<FileOperationState> {
   @override
-  FileOpState build() => const FileOpState();
+  FileOperationState build() => const FileOperationState();
 
-  Future<void> renameItem(String oldPath, String newName) async {
-    state = const FileOpState(isProcessing: true);
-    try {
-      final parentDir = File(oldPath).parent.path;
-      final newPath = path_utils.join(parentDir, newName);
-      
-      final type = await FileSystemEntity.type(oldPath);
-      if (type == FileSystemEntityType.file) {
-        await File(oldPath).rename(newPath);
-      } else if (type == FileSystemEntityType.directory) {
-        await Directory(oldPath).rename(newPath);
-      }
-      
-      _refreshCurrentDirectory();
-      state = const FileOpState(isProcessing: false);
-    } catch (e) {
-      state = FileOpState(errorMessage: 'Failed to rename: $e');
+  // --- SELECTION LOGIC ---
+  void toggleSelection(OmniNode node) {
+    final newSelection = Set<OmniNode>.from(state.selectedNodes);
+    if (newSelection.contains(node)) {
+      newSelection.remove(node);
+    } else {
+      newSelection.add(node);
     }
+    state = state.copyWith(selectedNodes: newSelection);
   }
 
-  Future<void> moveItem(String sourcePath, String destDirPath) async {
-    state = const FileOpState(isProcessing: true);
-    final fileName = path_utils.basename(sourcePath);
-    final destPath = path_utils.join(destDirPath, fileName);
+  void clearSelection() => state = state.copyWith(selectedNodes: {});
 
-    try {
-      // Attempt standard rename first
-      await File(sourcePath).rename(destPath);
-    } on FileSystemException {
-      // Fallback for cross-partition moves: Copy then Delete
-      try {
-        await File(sourcePath).copy(destPath);
-        await File(sourcePath).delete();
-      } catch (e) {
-        state = FileOpState(errorMessage: 'Failed to move: $e');
-        return;
-      }
-    }
-    _refreshCurrentDirectory();
-    state = const FileOpState(isProcessing: false);
+  // --- CLIPBOARD LOGIC ---
+  void setOperation(FileOpType type) {
+    if (state.selectedNodes.isEmpty && type != FileOpType.none) return;
+    state = state.copyWith(
+      clipboard: state.selectedNodes.toList(),
+      operation: type,
+      selectedNodes: {}, // Clear selection after cutting/copying
+    );
   }
 
-  Future<void> deleteItem(String path) async {
-    state = const FileOpState(isProcessing: true);
-    try {
-      final type = await FileSystemEntity.type(path);
-      if (type == FileSystemEntityType.file) {
-        await File(path).delete();
-      } else {
-        await Directory(path).delete(recursive: true);
-      }
-      _refreshCurrentDirectory();
-      state = const FileOpState(isProcessing: false);
-    } catch (e) {
-      state = FileOpState(errorMessage: 'Failed to delete: $e');
-    }
-  }
+  void clearClipboard() => state = state.copyWith(clipboard: [], operation: FileOpType.none);
 
-  void _refreshCurrentDirectory() {
-    final currentPath = ref.read(directoryProvider).currentPath;
-    ref.read(directoryProvider.notifier).loadDirectory(currentPath);
+  // Execute the paste/extract
+  Future<void> executePaste(String destinationPath) async {
+    if (state.operation == FileOpType.none || state.clipboard.isEmpty) return;
+
+    // TODO: Call your FileSystemProvider to actually copy/move the files here
+    // print('Executing ${state.operation} to $destinationPath');
+
+    // Clear after pasting
+    clearClipboard();
   }
 }
 
-final fileOpProvider = NotifierProvider<FileOperationNotifier, FileOpState>(() {
+final fileOperationProvider = NotifierProvider<FileOperationNotifier, FileOperationState>(() {
   return FileOperationNotifier();
 });
