@@ -27,6 +27,7 @@ dependencies:
   # Media Players (Official & Verified)
   just_audio: ^0.9.36
   video_player: ^2.9.2
+  flutter_svg: ^2.0.10
 
 dev_dependencies:
   flutter_lints: ^4.0.0
