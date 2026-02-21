@@ -6,16 +6,18 @@ class CompressParams {
   final String sourcePath;
   final String destinationPath;
   final String format;
+  final String? password;
 
   const CompressParams({
     required this.sourcePath,
     required this.destinationPath,
     this.format = 'zip',
+    this.password,
   });
 }
 
 class ArchiveService {
-  
+  // PHASE 1 FIX: These are instance methods, not static
   Future<void> compressDirectory(CompressParams params) async {
     var encoder = ZipFileEncoder();
     encoder.create(params.destinationPath);
@@ -26,7 +28,6 @@ class ArchiveService {
   Future<void> compress(List<String> filePaths, String destinationZip) async {
     var encoder = ZipFileEncoder();
     encoder.create(destinationZip);
-    
     for (String path in filePaths) {
       final stat = await FileStat.stat(path);
       if (stat.type == FileSystemEntityType.directory) {
@@ -41,7 +42,6 @@ class ArchiveService {
   Future<void> extract(String zipPath, String destinationDir) async {
     final bytes = await File(zipPath).readAsBytes();
     final archive = ZipDecoder().decodeBytes(bytes);
-    
     for (final file in archive) {
       final filename = file.name;
       if (file.isFile) {

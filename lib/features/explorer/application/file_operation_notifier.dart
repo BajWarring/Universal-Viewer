@@ -2,27 +2,43 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../filesystem/domain/entities/omni_node.dart';
 
 enum FileOpType { none, copy, cut, extract }
+enum SortBy { name, size, date, type }
+enum SortOrder { asc, desc }
 
 class FileOperationState {
   final Set<OmniNode> selectedNodes;
   final List<OmniNode> clipboard;
   final FileOpType operation;
+  final SortBy sortBy;
+  final SortOrder sortOrder;
+  final bool isGridView;
 
   const FileOperationState({
     this.selectedNodes = const {},
     this.clipboard = const [],
     this.operation = FileOpType.none,
+    this.sortBy = SortBy.name,
+    this.sortOrder = SortOrder.asc,
+    this.isGridView = false,
   });
+
+  bool get isSelectionMode => selectedNodes.isNotEmpty;
 
   FileOperationState copyWith({
     Set<OmniNode>? selectedNodes,
     List<OmniNode>? clipboard,
     FileOpType? operation,
+    SortBy? sortBy,
+    SortOrder? sortOrder,
+    bool? isGridView,
   }) {
     return FileOperationState(
       selectedNodes: selectedNodes ?? this.selectedNodes,
       clipboard: clipboard ?? this.clipboard,
       operation: operation ?? this.operation,
+      sortBy: sortBy ?? this.sortBy,
+      sortOrder: sortOrder ?? this.sortOrder,
+      isGridView: isGridView ?? this.isGridView,
     );
   }
 }
@@ -31,43 +47,53 @@ class FileOperationNotifier extends Notifier<FileOperationState> {
   @override
   FileOperationState build() => const FileOperationState();
 
-  // --- SELECTION LOGIC ---
   void toggleSelection(OmniNode node) {
-    final newSelection = Set<OmniNode>.from(state.selectedNodes);
-    if (newSelection.contains(node)) {
-      newSelection.remove(node);
-    } else {
-      newSelection.add(node);
-    }
-    state = state.copyWith(selectedNodes: newSelection);
+    final newSel = Set<OmniNode>.from(state.selectedNodes);
+    if (newSel.contains(node)) newSel.remove(node); else newSel.add(node);
+    state = state.copyWith(selectedNodes: newSel);
+  }
+
+  void selectAll(List<OmniNode> nodes) => state = state.copyWith(selectedNodes: Set.from(nodes));
+  void deselectAll() => state = state.copyWith(selectedNodes: {});
+  void invertSelection(List<OmniNode> nodes) {
+    final newSel = nodes.where((n) => !state.selectedNodes.contains(n)).toSet();
+    state = state.copyWith(selectedNodes: newSel);
   }
 
   void clearSelection() => state = state.copyWith(selectedNodes: {});
 
-  // --- CLIPBOARD LOGIC ---
   void setOperation(FileOpType type) {
     if (state.selectedNodes.isEmpty && type != FileOpType.none) return;
-    state = state.copyWith(
-      clipboard: state.selectedNodes.toList(),
-      operation: type,
-      selectedNodes: {}, // Clear selection after cutting/copying
-    );
+    state = state.copyWith(clipboard: state.selectedNodes.toList(), operation: type, selectedNodes: {});
   }
 
   void clearClipboard() => state = state.copyWith(clipboard: [], operation: FileOpType.none);
 
-  // Execute the paste/extract
+  void setSortBy(SortBy by) => state = state.copyWith(sortBy: by);
+  void toggleSortOrder() => state = state.copyWith(sortOrder: state.sortOrder == SortOrder.asc ? SortOrder.desc : SortOrder.asc);
+  void toggleView() => state = state.copyWith(isGridView: !state.isGridView);
+
   Future<void> executePaste(String destinationPath) async {
     if (state.operation == FileOpType.none || state.clipboard.isEmpty) return;
-
-    // TODO: Call your FileSystemProvider to actually copy/move the files here
-    // print('Executing ${state.operation} to $destinationPath');
-
-    // Clear after pasting
     clearClipboard();
+  }
+
+  List<OmniNode> sortedNodes(List<OmniNode> nodes) {
+    final sorted = List<OmniNode>.from(nodes);
+    sorted.sort((a, b) {
+      if (a.isFolder && !b.isFolder) return -1;
+      if (!a.isFolder && b.isFolder) return 1;
+      int cmp;
+      switch (state.sortBy) {
+        case SortBy.name: cmp = a.name.toLowerCase().compareTo(b.name.toLowerCase()); break;
+        case SortBy.size: cmp = a.size.compareTo(b.size); break;
+        case SortBy.date: cmp = a.modified.compareTo(b.modified); break;
+        case SortBy.type: cmp = a.extension.compareTo(b.extension); break;
+      }
+      return state.sortOrder == SortOrder.asc ? cmp : -cmp;
+    });
+    return sorted;
   }
 }
 
-final fileOperationProvider = NotifierProvider<FileOperationNotifier, FileOperationState>(() {
-  return FileOperationNotifier();
-});
+final fileOperationProvider = NotifierProvider<FileOperationNotifier, FileOperationState>(() => FileOperationNotifier());

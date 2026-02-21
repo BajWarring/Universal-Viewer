@@ -7,6 +7,6 @@ final sl = GetIt.instance;
 Future<void> initializeDependencies() async {
   sl.registerLazySingleton<FileSystemProvider>(
     () => LocalFileSystemProvider(),
-    instanceName: 'local'
+    instanceName: 'local',
   );
 }

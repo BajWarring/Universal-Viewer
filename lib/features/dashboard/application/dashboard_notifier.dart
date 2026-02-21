@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../../filesystem/domain/entities/omni_node.dart';
@@ -29,52 +28,37 @@ class DashboardNotifier extends Notifier<DashboardState> {
   }
 
   Future<void> initializeApp() async {
-    // 1. Ask for Permission on First Launch
     var status = await Permission.manageExternalStorage.request();
-    if (!status.isGranted) {
-      status = await Permission.storage.request();
-    }
-
+    if (!status.isGranted) status = await Permission.storage.request();
     if (!status.isGranted) {
       state = const DashboardState(isLoading: false, hasPermission: false);
       return;
     }
 
-    // 2. Define Storage Drives
     final drives = [
       OmniNode(name: 'Internal Storage', path: '/storage/emulated/0', size: 0, modified: DateTime.now(), isFolder: true, extension: ''),
-      // Android dynamically mounts SD cards, this is the standard fallback path. 
-      // In a production app, you'd use external_path package to get the exact UUID.
       OmniNode(name: 'SD Card', path: '/storage/sdcard1', size: 0, modified: DateTime.now(), isFolder: true, extension: ''),
     ];
-
-    // 3. Define Default Pinned Folders
     final pinned = [
       OmniNode(name: 'Downloads', path: '/storage/emulated/0/Download', size: 0, modified: DateTime.now(), isFolder: true, extension: ''),
       OmniNode(name: 'Documents', path: '/storage/emulated/0/Documents', size: 0, modified: DateTime.now(), isFolder: true, extension: ''),
+      OmniNode(name: 'DCIM', path: '/storage/emulated/0/DCIM', size: 0, modified: DateTime.now(), isFolder: true, extension: ''),
     ];
 
-    // 4. Fetch Actual Recent Files (Scans Downloads and Documents)
     final provider = sl<FileSystemProvider>(instanceName: 'local');
     List<OmniNode> realRecentFiles = [];
-    
     for (var folder in pinned) {
       try {
         final nodes = await provider.listDirectory(folder.path);
         realRecentFiles.addAll(nodes.where((n) => !n.isFolder));
-      } catch (_) {} // Ignore if folder is empty or locked
+      } catch (_) {}
     }
-
-    // Sort newest first and grab top 10
     realRecentFiles.sort((a, b) => b.modified.compareTo(a.modified));
     final topRecent = realRecentFiles.take(10).toList();
 
     state = DashboardState(
-      isLoading: false,
-      hasPermission: true,
-      recentFiles: topRecent,
-      pinnedFolders: pinned,
-      storageDrives: drives,
+      isLoading: false, hasPermission: true,
+      recentFiles: topRecent, pinnedFolders: pinned, storageDrives: drives,
     );
   }
 

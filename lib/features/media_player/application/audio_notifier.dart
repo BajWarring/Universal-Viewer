@@ -8,12 +8,7 @@ class AudioState {
   final Duration position;
   final Duration duration;
 
-  const AudioState({
-    this.currentTrack,
-    this.isPlaying = false,
-    this.position = Duration.zero,
-    this.duration = Duration.zero,
-  });
+  const AudioState({this.currentTrack, this.isPlaying = false, this.position = Duration.zero, this.duration = Duration.zero});
 
   AudioState copyWith({OmniNode? track, bool? isPlaying, Duration? pos, Duration? dur}) {
     return AudioState(
@@ -31,12 +26,10 @@ class AudioNotifier extends Notifier<AudioState> {
   @override
   AudioState build() {
     _player = AudioPlayer();
-    
-    // Listen to player streams to update UI state
     _player.positionStream.listen((p) => state = state.copyWith(pos: p));
     _player.durationStream.listen((d) => state = state.copyWith(dur: d ?? Duration.zero));
     _player.playingStream.listen((p) => state = state.copyWith(isPlaying: p));
-    
+    ref.onDispose(() => _player.dispose());
     return const AudioState();
   }
 
@@ -47,18 +40,14 @@ class AudioNotifier extends Notifier<AudioState> {
   }
 
   void togglePlayPause() {
-    if (_player.playing) {
-      _player.pause();
-    } else {
-      _player.play();
-    }
+    if (_player.playing) _player.pause(); else _player.play();
   }
 
   void seek(Duration position) => _player.seek(position);
 
   void stopAndDismiss() {
     _player.stop();
-    state = const AudioState(); // Clears current track, hiding the mini-player
+    state = const AudioState();
   }
 }
 

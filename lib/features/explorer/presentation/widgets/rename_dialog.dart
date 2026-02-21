@@ -6,9 +6,7 @@ import '../../../../filesystem/application/directory_notifier.dart';
 
 class RenameDialog extends ConsumerStatefulWidget {
   final OmniNode node;
-
   const RenameDialog({super.key, required this.node});
-
   @override
   ConsumerState<RenameDialog> createState() => _RenameDialogState();
 }
@@ -20,7 +18,6 @@ class _RenameDialogState extends ConsumerState<RenameDialog> {
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.node.name);
-    // Select just the name part, not the extension
     if (!widget.node.isFolder && widget.node.name.contains('.')) {
       final extIndex = widget.node.name.lastIndexOf('.');
       _controller.selection = TextSelection(baseOffset: 0, extentOffset: extIndex);
@@ -37,28 +34,18 @@ class _RenameDialogState extends ConsumerState<RenameDialog> {
 
   Future<void> _performRename() async {
     final newName = _controller.text.trim();
-    if (newName.isEmpty || newName == widget.node.name) {
-      Navigator.pop(context);
-      return;
-    }
-
+    if (newName.isEmpty || newName == widget.node.name) { Navigator.pop(context); return; }
     try {
       final oldFile = File(widget.node.path);
       final newPath = widget.node.path.replaceAll(widget.node.name, newName);
-      
       await oldFile.rename(newPath);
-      
-      // Refresh the current directory to show the new name
       if (context.mounted) {
-        final currentPath = ref.read(directoryProvider).currentPath;
-        ref.read(directoryProvider.notifier).loadDirectory(currentPath);
+        ref.read(directoryProvider.notifier).loadDirectory(ref.read(directoryProvider).currentPath);
         Navigator.pop(context);
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to rename: $e')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to rename: $e')));
       }
     }
   }
@@ -66,25 +53,16 @@ class _RenameDialogState extends ConsumerState<RenameDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: const Text('Rename'),
       content: TextField(
-        controller: _controller,
-        autofocus: true,
-        decoration: const InputDecoration(
-          border: OutlineInputBorder(),
-          labelText: 'File name',
-        ),
+        controller: _controller, autofocus: true,
+        decoration: const InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))), labelText: 'File name'),
         onSubmitted: (_) => _performRename(),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: _performRename,
-          child: const Text('Rename'),
-        ),
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        FilledButton(onPressed: _performRename, child: const Text('Rename')),
       ],
     );
   }

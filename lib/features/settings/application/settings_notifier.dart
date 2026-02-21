@@ -1,46 +1,25 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// Represents the current user settings
 class SettingsState {
   final Map<String, dynamic> values;
-
   const SettingsState({required this.values});
-
   SettingsState copyWith(String key, dynamic value) {
-    final newValues = Map<String, dynamic>.from(values);
-    newValues[key] = value;
-    return SettingsState(values: newValues);
+    final n = Map<String, dynamic>.from(values); n[key] = value; return SettingsState(values: n);
   }
-  
   dynamic get(String key) => values[key];
 }
 
 class SettingsNotifier extends Notifier<SettingsState> {
   @override
-  SettingsState build() {
-    // These match the 'defaultSettings' from your HTML
-    return const SettingsState(
-      values: {
-        'theme': 'Simple Light',
-        'darkMode': false,
-        'animationIntensity': 'Full',
-        'layoutDensity': 'Comfortable',
-        'iconSize': 'Medium',
-        'enableThumbnails': true,
-        'showHiddenFiles': false,
-        'confirmDelete': true,
-        'largeFileThreshold': 500,
-        // Add the rest of your defaults here...
-      },
-    );
-  }
+  SettingsState build() => const SettingsState(values: {
+    'theme': 'Simple Dark', 'darkMode': true, 'animationIntensity': 'Full',
+    'layoutDensity': 'Comfortable', 'iconSize': 'Medium', 'enableThumbnails': true,
+    'showHiddenFiles': false, 'confirmDelete': true, 'largeFileThreshold': 500,
+    'defaultLayout': 'List', 'showFileSize': true, 'showDateModified': true,
+    'searchSubfolders': true, 'hapticFeedback': true,
+  });
 
-  void updateSetting(String key, dynamic value) {
-    state = state.copyWith(key, value);
-    // TODO: Save to SharedPreferences/Drift here
-  }
+  void updateSetting(String key, dynamic value) { state = state.copyWith(key, value); }
 }
 
-final settingsProvider = NotifierProvider<SettingsNotifier, SettingsState>(() {
-  return SettingsNotifier();
-});
+final settingsProvider = NotifierProvider<SettingsNotifier, SettingsState>(() => SettingsNotifier());

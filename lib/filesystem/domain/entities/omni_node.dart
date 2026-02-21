@@ -15,6 +15,13 @@ class OmniNode {
     required this.extension,
   });
 
+  // PHASE 1 FIX: Added == and hashCode so Set<OmniNode> works correctly
+  @override
+  bool operator ==(Object other) => other is OmniNode && other.path == path;
+
+  @override
+  int get hashCode => path.hashCode;
+
   OmniNode copyWith({
     String? name,
     String? path,
@@ -34,7 +41,6 @@ class OmniNode {
   }
 }
 
-// Subclass specifically for files
 class OmniFile extends OmniNode {
   const OmniFile({
     required String name,
@@ -52,13 +58,12 @@ class OmniFile extends OmniNode {
         );
 }
 
-// Subclass specifically for folders
 class OmniFolder extends OmniNode {
   const OmniFolder({
     required String name,
     required String path,
     required DateTime modified,
-    int size = 0, // Folders default to 0 size unless explicitly calculated
+    int size = 0,
   }) : super(
           name: name,
           path: path,

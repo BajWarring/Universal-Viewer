@@ -4,36 +4,31 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 class ThemeState {
   final String themeName;
   final ThemeMode themeMode;
-  
+
   const ThemeState({
-    this.themeName = 'Simple Light',
-    this.themeMode = ThemeMode.system,
+    this.themeName = 'Simple Dark',
+    this.themeMode = ThemeMode.dark,
   });
 
   ThemeState copyWith({String? themeName, ThemeMode? themeMode}) {
-    return ThemeState(
-      themeName: themeName ?? this.themeName,
-      themeMode: themeMode ?? this.themeMode,
-    );
+    return ThemeState(themeName: themeName ?? this.themeName, themeMode: themeMode ?? this.themeMode);
   }
 }
 
 class ThemeNotifier extends Notifier<ThemeState> {
+  static const List<String> allThemes = [
+    "Simple Light", "Simple Dark", "Pure Black", "Material You Dynamic",
+    "Ocean Blue", "Forest Green", "Sunset Orange", "Midnight Purple", "Minimal Gray", "High Contrast",
+  ];
+
   @override
-  ThemeState build() {
-    // In Phase 5, we will load the saved settings from shared_preferences/Drift here.
-    return const ThemeState();
-  }
+  ThemeState build() => const ThemeState();
 
   void setThemeName(String name) {
-    state = state.copyWith(themeName: name);
-    
-    // Automatically adjust the ThemeMode based on the specific Pure Black and Light overrides
-    if (name == 'Simple Light') {
-      state = state.copyWith(themeMode: ThemeMode.light);
-    } else if (name == 'Simple Dark' || name == 'Pure Black') {
-      state = state.copyWith(themeMode: ThemeMode.dark);
-    }
+    ThemeMode mode = state.themeMode;
+    if (name == 'Simple Light') mode = ThemeMode.light;
+    else if (name == 'Simple Dark' || name == 'Pure Black') mode = ThemeMode.dark;
+    state = ThemeState(themeName: name, themeMode: mode);
   }
 
   void setThemeMode(ThemeMode mode) {
@@ -41,7 +36,4 @@ class ThemeNotifier extends Notifier<ThemeState> {
   }
 }
 
-// Global provider for the UI to listen to
-final themeProvider = NotifierProvider<ThemeNotifier, ThemeState>(() {
-  return ThemeNotifier();
-});
+final themeProvider = NotifierProvider<ThemeNotifier, ThemeState>(() => ThemeNotifier());

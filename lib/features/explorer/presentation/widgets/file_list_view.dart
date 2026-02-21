@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../filesystem/domain/entities/omni_node.dart';
 import '../../../../filesystem/application/directory_notifier.dart';
@@ -8,94 +9,77 @@ import 'action_bottom_sheet.dart';
 
 class FileListView extends ConsumerWidget {
   final List<OmniNode> nodes;
-
   const FileListView({super.key, required this.nodes});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final opState = ref.watch(fileOperationProvider);
-    final isSelectionMode = opState.selectedNodes.isNotEmpty;
     final theme = Theme.of(context);
 
-    if (nodes.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.folder_open, size: 64, color: theme.colorScheme.outlineVariant),
-            const SizedBox(height: 16),
-            Text('This folder is empty', style: TextStyle(color: theme.colorScheme.outline)),
-          ],
-        ),
-      );
+    final sorted = ref.read(fileOperationProvider.notifier).sortedNodes(nodes);
+
+    if (sorted.isEmpty) {
+      return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(Icons.folder_open_rounded, size: 64, color: theme.colorScheme.outlineVariant),
+        const SizedBox(height: 16),
+        Text('This folder is empty', style: TextStyle(color: theme.colorScheme.outline)),
+      ]));
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.only(bottom: 88), // Extra padding so FAB doesn't hide the last file
-      itemCount: nodes.length,
-      separatorBuilder: (context, index) => Divider(height: 1, color: theme.dividerColor.withOpacity(0.1)),
+      padding: const EdgeInsets.only(bottom: 96),
+      itemCount: sorted.length,
+      separatorBuilder: (_, __) => Divider(height: 1, color: theme.dividerColor.withOpacity(0.08)),
       itemBuilder: (context, index) {
-        final node = nodes[index];
+        final node = sorted[index];
         final isSelected = opState.selectedNodes.contains(node);
 
         return ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           selected: isSelected,
-          selectedTileColor: theme.colorScheme.primaryContainer.withOpacity(0.3),
-          leading: CircleAvatar(
-            backgroundColor: isSelected 
-                ? theme.colorScheme.primary 
-                : theme.colorScheme.surfaceContainerHighest,
-            child: isSelected 
-                ? Icon(Icons.check, color: theme.colorScheme.onPrimary)
+          selectedTileColor: theme.colorScheme.primaryContainer.withOpacity(0.25),
+          leading: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: 44, height: 44,
+            decoration: BoxDecoration(
+              color: isSelected ? theme.colorScheme.primary : theme.colorScheme.surfaceContainerHighest,
+              shape: BoxShape.circle,
+            ),
+            child: isSelected
+                ? Icon(Icons.check_rounded, color: theme.colorScheme.onPrimary)
                 : Icon(
-                    node.isFolder ? Icons.folder : Icons.insert_drive_file,
+                    node.isFolder ? Icons.folder_rounded : _fileIcon(node.extension),
                     color: node.isFolder ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
                   ),
           ),
-          title: Text(
-            node.name, 
-            maxLines: 1, 
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontWeight: FontWeight.w500),
-          ),
+          title: Text(node.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w500)),
           subtitle: Padding(
-            padding: const EdgeInsets.only(top: 4.0),
-            child: Row(
-              children: [
-                Text(
-                  node.isFolder ? 'Folder' : _formatBytes(node.size),
-                  style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '•  ${_formatDate(node.modified)}',
-                  style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
-                ),
-              ],
-            ),
+            padding: const EdgeInsets.only(top: 3),
+            child: Row(children: [
+              Text(
+                node.isFolder ? 'Folder' : _formatBytes(node.size),
+                style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+              ),
+              // PHASE 1 FIX: proper Unicode bullet char (•)
+              Text(' • ${_formatDate(node.modified)}',
+                style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
+            ]),
           ),
-          trailing: isSelectionMode 
-              ? null // Hide the 3-dots when selecting files
-              : IconButton(
-                  icon: const Icon(Icons.more_vert),
-                  onPressed: () => ActionBottomSheet.show(context, node),
-                ),
+          trailing: opState.isSelectionMode
+              ? null
+              : IconButton(icon: const Icon(Icons.more_vert_rounded, size: 20), onPressed: () => ActionBottomSheet.show(context, node)),
           onLongPress: () {
+            HapticFeedback.mediumImpact();
             ref.read(fileOperationProvider.notifier).toggleSelection(node);
           },
           onTap: () {
-            if (isSelectionMode) {
-              // If we are already selecting, a standard tap selects/deselects
+            if (opState.isSelectionMode) {
               ref.read(fileOperationProvider.notifier).toggleSelection(node);
             } else {
-              // Normal Tap behavior
               if (node.isFolder) {
                 ref.read(directoryProvider.notifier).navigateTo(node.name);
               } else {
-                Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => PreviewScreen(node: node),
-                ));
+                Navigator.push(context, MaterialPageRoute(builder: (_) => PreviewScreen(node: node)));
               }
             }
           },
@@ -104,7 +88,18 @@ class FileListView extends ConsumerWidget {
     );
   }
 
-  // Helper method to make file sizes readable
+  IconData _fileIcon(String ext) {
+    switch (ext.toLowerCase()) {
+      case 'mp4': case 'mkv': case 'avi': return Icons.video_library_rounded;
+      case 'mp3': case 'wav': case 'flac': return Icons.music_note_rounded;
+      case 'jpg': case 'jpeg': case 'png': case 'gif': case 'webp': return Icons.image_rounded;
+      case 'pdf': return Icons.picture_as_pdf_rounded;
+      case 'zip': case 'rar': case '7z': case 'tar': return Icons.folder_zip_rounded;
+      case 'apk': return Icons.android_rounded;
+      default: return Icons.insert_drive_file_rounded;
+    }
+  }
+
   String _formatBytes(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
@@ -112,7 +107,6 @@ class FileListView extends ConsumerWidget {
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
   }
 
-  // Helper method to format dates
   String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
