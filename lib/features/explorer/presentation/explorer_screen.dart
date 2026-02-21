@@ -16,11 +16,12 @@ class ExplorerScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       body: SafeArea(
-        child: Column(
-          children: [
-            // The Header we built in Phase 4 (Path breadcrumbs, search icon, etc.)
-            const ExplorerHeader(),
-            
+        return Scaffold(
+  appBar: const ExplorerHeader(),
+  body: dirState.nodes.when(...),
+  floatingActionButton: const DynamicFab(),
+);
+        
             // The File List
             Expanded(
               child: dirState.nodes.when(
