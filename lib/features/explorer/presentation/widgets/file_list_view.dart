@@ -18,11 +18,16 @@ class FileListView extends ConsumerWidget {
     final sorted = ref.read(fileOperationProvider.notifier).sortedNodes(nodes);
 
     if (sorted.isEmpty) {
-      return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(Icons.folder_open_rounded, size: 64, color: theme.colorScheme.outlineVariant),
-        const SizedBox(height: 16),
-        Text('This folder is empty', style: TextStyle(color: theme.colorScheme.outline)),
-      ]));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center, 
+          children: [
+            Icon(Icons.folder_open_rounded, size: 64, color: theme.colorScheme.outlineVariant),
+            const SizedBox(height: 16),
+            Text('This folder is empty', style: TextStyle(color: theme.colorScheme.outline)),
+          ]
+        )
+      );
     }
 
     return ListView.separated(
@@ -51,11 +56,14 @@ class FileListView extends ConsumerWidget {
           ),
           title: Text(node.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w500)),
           subtitle: Text(node.isFolder ? '${node.name} Folder' : _formatBytes(node.size), style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
-          trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-            Text(_formatDate(node.modified), style: const TextStyle(fontSize: 12, color: Colors.grey)),
-            if (!opState.isSelectionMode)
-              IconButton(icon: const Icon(Icons.more_vert_rounded, size: 20), onPressed: () => ActionBottomSheet.show(context, node)),
-          ]),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min, 
+            children: [
+              Text(_formatDate(node.modified), style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              if (!opState.isSelectionMode)
+                IconButton(icon: const Icon(Icons.more_vert_rounded, size: 20), onPressed: () => ActionBottomSheet.show(context, node)),
+            ]
+          ),
           onLongPress: () {
             HapticFeedback.mediumImpact();
             ref.read(fileOperationProvider.notifier).toggleSelection(node);
@@ -63,11 +71,10 @@ class FileListView extends ConsumerWidget {
           onTap: () {
             if (opState.isSelectionMode) {
               ref.read(fileOperationProvider.notifier).toggleSelection(node);
+            } else if (node.isFolder) {
+              ref.read(directoryProvider.notifier).navigateTo(node.name);
             } else {
-              if (node.isFolder) {
-                ref.read(directoryProvider.notifier).navigateTo(node.name);
-              } else { UnifiedViewer.show(context, node); }
-              }
+              UnifiedViewer.show(context, node);
             }
           },
         );
