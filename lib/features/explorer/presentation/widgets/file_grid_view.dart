@@ -18,7 +18,16 @@ class FileGridView extends ConsumerWidget {
     final sorted = ref.read(fileOperationProvider.notifier).sortedNodes(nodes);
 
     if (sorted.isEmpty) {
-      return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.folder_open_rounded, size: 64, color: theme.colorScheme.outlineVariant), const SizedBox(height: 16), Text('This folder is empty', style: TextStyle(color: theme.colorScheme.outline))]));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center, 
+          children: [
+            Icon(Icons.folder_open_rounded, size: 64, color: theme.colorScheme.outlineVariant), 
+            const SizedBox(height: 16), 
+            Text('This folder is empty', style: TextStyle(color: theme.colorScheme.outline))
+          ]
+        )
+      );
     }
 
     return GridView.builder(
@@ -30,34 +39,59 @@ class FileGridView extends ConsumerWidget {
         final isSelected = opState.selectedNodes.contains(node);
 
         return GestureDetector(
-          onLongPress: () { HapticFeedback.mediumImpact(); ref.read(fileOperationProvider.notifier).toggleSelection(node); },
+          onLongPress: () { 
+            HapticFeedback.mediumImpact(); 
+            ref.read(fileOperationProvider.notifier).toggleSelection(node); 
+          },
           onTap: () {
             if (opState.isSelectionMode) {
               ref.read(fileOperationProvider.notifier).toggleSelection(node);
             } else if (node.isFolder) {
               ref.read(directoryProvider.notifier).navigateTo(node.name);
-            } else UnifiedViewer.show(context, node);
-
+            } else {
+              UnifiedViewer.show(context, node);
             }
           },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            decoration: BoxDecoration(color: isSelected ? theme.colorScheme.primaryContainer.withValues(alpha: 0.4) : theme.colorScheme.surfaceContainer, borderRadius: BorderRadius.circular(16), border: Border.all(color: isSelected ? theme.colorScheme.primary : theme.colorScheme.outlineVariant.withValues(alpha: 0.3), width: isSelected ? 2 : 1)),
-            child: Stack(children: [
-              Padding(padding: const EdgeInsets.all(12), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Container(width: 52, height: 52, decoration: BoxDecoration(color: isSelected ? theme.colorScheme.primary.withValues(alpha: 0.15) : theme.colorScheme.primaryContainer.withValues(alpha: 0.3), shape: BoxShape.circle), child: isSelected ? Icon(Icons.check_rounded, color: theme.colorScheme.primary, size: 26) : Icon(node.isFolder ? 
-Icons.folder_rounded : _fileIcon(node.extension), color: node.isFolder ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant, size: 28)),
-                const SizedBox(height: 10),
-                Text(node.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
-                const SizedBox(height: 4),
-                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Text(node.isFolder ? '${node.name} items' : _formatBytes(node.size), style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant)), 
-                  const SizedBox(width: 8), 
-                  Text(_formatDate(node.modified), style: const TextStyle(fontSize: 10, color: Colors.grey))
-                ]),
-              ])),
-              if (!opState.isSelectionMode) Positioned(top: 4, right: 4, child: IconButton(iconSize: 18, icon: const Icon(Icons.more_vert_rounded), onPressed: () => ActionBottomSheet.show(context, node))),
-            ]),
+            decoration: BoxDecoration(
+              color: isSelected ? theme.colorScheme.primaryContainer.withValues(alpha: 0.4) : theme.colorScheme.surfaceContainer, 
+              borderRadius: BorderRadius.circular(16), 
+              border: Border.all(color: isSelected ? theme.colorScheme.primary : theme.colorScheme.outlineVariant.withValues(alpha: 0.3), width: isSelected ? 2 : 1)
+            ),
+            child: Stack(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(12), 
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center, 
+                    children: [
+                      Container(
+                        width: 52, height: 52, 
+                        decoration: BoxDecoration(color: isSelected ? theme.colorScheme.primary.withValues(alpha: 0.15) : theme.colorScheme.primaryContainer.withValues(alpha: 0.3), shape: BoxShape.circle), 
+                        child: isSelected ? Icon(Icons.check_rounded, color: theme.colorScheme.primary, size: 26) : Icon(node.isFolder ? Icons.folder_rounded : _fileIcon(node.extension), color: node.isFolder ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant, size: 28)
+                      ),
+                      const SizedBox(height: 10),
+                      Text(node.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center, 
+                        children: [
+                          Text(node.isFolder ? '${node.name} items' : _formatBytes(node.size), style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant)), 
+                          const SizedBox(width: 8), 
+                          Text(_formatDate(node.modified), style: const TextStyle(fontSize: 10, color: Colors.grey))
+                        ]
+                      ),
+                    ]
+                  )
+                ),
+                if (!opState.isSelectionMode) 
+                  Positioned(
+                    top: 4, right: 4, 
+                    child: IconButton(iconSize: 18, icon: const Icon(Icons.more_vert_rounded), onPressed: () => ActionBottomSheet.show(context, node))
+                  ),
+              ],
+            ),
           ),
         );
       },
@@ -82,6 +116,6 @@ Icons.folder_rounded : _fileIcon(node.extension), color: node.isFolder ? theme.c
   }
 
   String _formatDate(DateTime date) {
-    return '${date.year}-${date.month.toString().padLeft(2,'0')}-${date.day.toString().padLeft(2,'0')}';
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 }
