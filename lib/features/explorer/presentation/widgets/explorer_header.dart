@@ -26,7 +26,7 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
     }
 
     final currentFolderName = dirState.pathStack.isEmpty ? 'Storage' : dirState.pathStack.last.split('/').last;
-
+    
     return AppBar(
       title: GestureDetector(
         onTap: () => _showBreadcrumbDropdown(context, ref, dirState),
@@ -42,7 +42,8 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
       ),
       actions: [
         IconButton(icon: const Icon(Icons.search_rounded), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()))),
-        IconButton(icon: Icon(opState.isGridView ? Icons.view_list_rounded : Icons.grid_view_rounded), onPressed: () => ref.read(fileOperationProvider.notifier).toggleView()),
+        IconButton(icon: Icon(opState.isGridView ? Icons.view_list_rounded : Icons.grid_view_rounded), onPressed: () 
+=> ref.read(fileOperationProvider.notifier).toggleView()),
         IconButton(icon: const Icon(Icons.more_vert_rounded), onPressed: () => _showMoreMenu(context, ref, opState)),
       ],
     );
@@ -57,7 +58,8 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
         decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainer, borderRadius: BorderRadius.circular(28)),
         child: SafeArea(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(width: 40, height: 4, margin: const EdgeInsets.only(top: 12, bottom: 8), decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2))),
+            Container(width: 40, height: 4, 
+margin: const EdgeInsets.only(top: 12, bottom: 8), decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2))),
             const Padding(padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8), child: Text('Current Path', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey))),
             ...List.generate(dirState.pathStack.length, (index) {
               final segment = dirState.pathStack[index].split('/').last;
@@ -87,11 +89,40 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
 }
 
 class _SelectionAppBar extends StatelessWidget implements PreferredSizeWidget {
-  final int selectedCount; final VoidCallback onClose, onSelectAll, onDeselectAll, onInvert;
+  final int selectedCount; 
+  final VoidCallback onClose, onSelectAll, onDeselectAll, onInvert;
+
   const _SelectionAppBar({required this.selectedCount, required this.onClose, required this.onSelectAll, required this.onDeselectAll, required this.onInvert});
-  @override Size get preferredSize => const Size.fromHeight(kToolbarHeight);
-  @override Widget build(BuildContext context) {
+  
+  @override 
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  
+  @override 
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return AppBar(backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.3), leading: IconButton(icon: const Icon(Icons.close_rounded), onPressed: onClose), title: Text('$selectedCount selected', style: const TextStyle(fontWeight: FontWeight.bold)), actions: [PopupMenuButton<String>(icon: const Icon(Icons.checklist_rounded), onSelected: (v) { if (v == 'all') onSelectAll(); else if (v == 'none') onDeselectAll(); else onInvert(); }, itemBuilder: (_) => const [PopupMenuItem(value: 'all', child: Text('Select All')), PopupMenuItem(value: 'none', child: Text('Deselect All')), PopupMenuItem(value: 'invert', child: Text('Invert Selection'))])]);
+    return AppBar(
+      backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.3), 
+      leading: IconButton(icon: const Icon(Icons.close_rounded), onPressed: onClose), 
+      title: Text('$selectedCount selected', style: const TextStyle(fontWeight: FontWeight.bold)), 
+      actions: [
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.checklist_rounded), 
+          onSelected: (v) { 
+            if (v == 'all') {
+              onSelectAll(); 
+            } else if (v == 'none') {
+              onDeselectAll(); 
+            } else {
+              onInvert(); 
+            }
+          }, 
+          itemBuilder: (_) => const [
+            PopupMenuItem(value: 'all', child: Text('Select All')), 
+            PopupMenuItem(value: 'none', child: Text('Deselect All')), 
+            PopupMenuItem(value: 'invert', child: Text('Invert Selection'))
+          ]
+        )
+      ]
+    );
   }
 }
