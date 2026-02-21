@@ -23,7 +23,6 @@ class _CompressDialogState extends ConsumerState<CompressDialog> {
   bool _deleteSource = false;
   bool _isObscured = true;
   bool _isProcessing = false;
-
   final _archiveService = ArchiveService();
 
   @override
@@ -44,36 +43,33 @@ class _CompressDialogState extends ConsumerState<CompressDialog> {
   Future<void> _startCompression() async {
     setState(() => _isProcessing = true);
     final destPath = '${widget.sourceNode.path}_compressed$_selectedFormat';
-
     final params = CompressParams(
       sourcePath: widget.sourceNode.path,
       destinationPath: destPath,
       format: _selectedFormat.replaceAll('.', ''),
       password: _passwordController.text.isEmpty ? null : _passwordController.text,
     );
-
     try {
       await _archiveService.compressDirectory(params);
       if (_deleteSource) {}
-      if (mounted) {
+      if (context.mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Archive Created!')));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       if (mounted) setState(() => _isProcessing = false);
     }
   }
 
-  
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final labelStyle = TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurfaceVariant, letterSpacing: 1.2);
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)), // rounded-3xl approx
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -93,7 +89,7 @@ class _CompressDialogState extends ConsumerState<CompressDialog> {
             TextField(
               controller: _nameController,
               decoration: InputDecoration(
-                filled: true, fillColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                filled: true, fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               ),
             ),
@@ -108,7 +104,7 @@ class _CompressDialogState extends ConsumerState<CompressDialog> {
                       const SizedBox(height: 4),
                       DropdownButtonFormField<String>(
                         value: _selectedFormat,
-                        decoration: InputDecoration(filled: true, fillColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
+                        decoration: InputDecoration(filled: true, fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
                         items: ['.zip', '.7z', '.tar'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
                         onChanged: (v) => setState(() => _selectedFormat = v!),
                       ),
@@ -124,7 +120,7 @@ class _CompressDialogState extends ConsumerState<CompressDialog> {
                       const SizedBox(height: 4),
                       DropdownButtonFormField<String>(
                         value: _selectedEncryption,
-                        decoration: InputDecoration(filled: true, fillColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
+                        decoration: InputDecoration(filled: true, fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3), border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)),
                         items: ['None', 'AES-256', 'ZipCrypto'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
                         onChanged: (v) => setState(() => _selectedEncryption = v!),
                       ),
@@ -141,7 +137,7 @@ class _CompressDialogState extends ConsumerState<CompressDialog> {
               obscureText: _isObscured,
               decoration: InputDecoration(
                 hintText: 'Optional',
-                filled: true, fillColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                filled: true, fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                 suffixIcon: IconButton(icon: Icon(_isObscured ? Icons.visibility_rounded : Icons.visibility_off_rounded), onPressed: () => setState(() => _isObscured = !_isObscured)),
               ),
@@ -166,5 +162,4 @@ class _CompressDialogState extends ConsumerState<CompressDialog> {
       ),
     );
   }
-
 }
