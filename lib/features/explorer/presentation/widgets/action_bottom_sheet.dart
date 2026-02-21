@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../filesystem/domain/entities/omni_node.dart';
+import '../../application/file_operation_notifier.dart';
 import 'rename_dialog.dart';
 
 class ActionBottomSheet extends ConsumerWidget {
@@ -12,7 +13,7 @@ class ActionBottomSheet extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent, // Letting the container handle the design
+      backgroundColor: Colors.transparent,
       builder: (context) => ActionBottomSheet(node: node),
     );
   }
@@ -22,115 +23,82 @@ class ActionBottomSheet extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.bottomSheetTheme.backgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(24),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Drag handle
-          Container(
-            width: 40,
-            height: 4,
-            margin: const EdgeInsets.only(bottom:24),
-            decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          // File Info Header
-          Row(
-            children: [
-              Icon(node.isFolder ? Icons.folder : Icons.insert_drive_file, size: 32, color: theme.colorScheme.primary),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(node.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    Text('${(node.size / 1024).toStringAsFixed(1)} KB', style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          // Action Grid
-          Wrap(
-            spacing: 16,
-            runSpacing: 16,
-            children: [
-              _ActionItem(
-                icon: Icons.edit,
-                label: 'Rename',
-                onTap: () {
-                  Navigator.pop(context);
-                  RenameDialog.show(context, node);
-                },
-              ),
-              _ActionItem(
-                icon: Icons.copy,
-                label: 'Copy',
-                onTap: () {
-                  // Trigger copy mode UI state
-                  Navigator.pop(context);
-                },
-              ),
-              _ActionItem(
-                icon: Icons.drive_file_move,
-                label: 'Move',
-                onTap: () {
-                  // Trigger move mode UI state
-                  Navigator.pop(context);
-                },
-              ),
-              _ActionItem(
-                icon: Icons.delete,
-                label: 'Delete',
-                isDestructive: true,
-                onTap: () {
-                  // Trigger Delete Confirmation
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActionItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool isDestructive;
-
-  const _ActionItem({required this.icon, required this.label, required this.onTap, this.isDestructive = false});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isDestructive ? Colors.red : Theme.of(context).colorScheme.onSurface;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: SizedBox(
-        width: 70,
+      child: SafeArea(
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isDestructive ? Colors.red.withOpacity(0.1) : Theme.of(context).colorScheme.surfaceContainerHighest,
-                shape: BoxShape.circle,
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Row(
+                children: [
+                  Icon(node.isFolder ? Icons.folder : Icons.insert_drive_file, color: theme.colorScheme.primary),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      node.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
-              child: Icon(icon, color: color),
+            ),
+            const Divider(height: 1),
+            
+            // Actions
+            ListTile(
+              leading: const Icon(Icons.copy),
+              title: const Text('Copy'),
+              onTap: () {
+                ref.read(fileOperationProvider.notifier).toggleSelection(node);
+                ref.read(fileOperationProvider.notifier).setOperation(FileOpType.copy);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.cut),
+              title: const Text('Cut'),
+              onTap: () {
+                ref.read(fileOperationProvider.notifier).toggleSelection(node);
+                ref.read(fileOperationProvider.notifier).setOperation(FileOpType.cut);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit),
+              title: const Text('Rename'),
+              onTap: () {
+                Navigator.pop(context);
+                showDialog(
+                  context: context,
+                  builder: (context) => RenameDialog(node: node),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.info_outline),
+              title: const Text('Details'),
+              onTap: () {
+                // TODO: Show Details Dialog
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.delete_outline, color: theme.colorScheme.error),
+              title: Text('Delete', style: TextStyle(color: theme.colorScheme.error)),
+              onTap: () {
+                // TODO: Perform Delete
+                Navigator.pop(context);
+              },
             ),
             const SizedBox(height: 8),
-            Text(label, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w500)),
           ],
         ),
       ),
