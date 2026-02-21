@@ -2,7 +2,27 @@ import 'dart:io';
 import 'package:archive/archive_io.dart';
 import 'package:path/path.dart' as p;
 
+class CompressParams {
+  final String sourcePath;
+  final String destinationPath;
+  final String format;
+
+  const CompressParams({
+    required this.sourcePath,
+    required this.destinationPath,
+    this.format = 'zip',
+  });
+}
+
 class ArchiveService {
+  
+  Future<void> compressDirectory(CompressParams params) async {
+    var encoder = ZipFileEncoder();
+    encoder.create(params.destinationPath);
+    encoder.addDirectory(Directory(params.sourcePath));
+    encoder.close();
+  }
+
   Future<void> compress(List<String> filePaths, String destinationZip) async {
     var encoder = ZipFileEncoder();
     encoder.create(destinationZip);
