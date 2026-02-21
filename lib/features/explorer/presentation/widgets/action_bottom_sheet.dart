@@ -48,7 +48,7 @@ class ActionBottomSheet extends ConsumerWidget {
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(node.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 2),
-                Text(node.isFolder ? 'Folder' : '\( {_formatBytes(node.size)} • . \){node.extension}', style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
+                Text(node.isFolder ? 'Folder' : '${_formatBytes(node.size)} • .${node.extension}', style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
               ])),
             ]),
           ),
@@ -111,13 +111,13 @@ class ActionBottomSheet extends ConsumerWidget {
   }
 
   void _openWith(BuildContext context) => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Opening with system apps...')));
-
+  
   void _extractHere(BuildContext context) => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Extracting here...')));
 
   void _extractTo(BuildContext context) => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Choose destination...')));
-
+  
   void _showRename(BuildContext context) => showModalBottomSheet(context: context, isScrollControlled: true, builder: (_) => Padding(padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom), child: RenameDialog(node: node)));
-
+  
   void _showDeleteConfirm(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(context: context, builder: (_) => Container(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
       Text('Delete ${node.name}?', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
@@ -127,7 +127,7 @@ class ActionBottomSheet extends ConsumerWidget {
         const SizedBox(width: 12),
         Expanded(child: FilledButton(onPressed: () async {
           await ref.read(directoryProvider.notifier).deleteNode(node);
-          if (mounted) {
+          if (context.mounted) {
             Navigator.pop(context);
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${node.name} deleted')));
           }
@@ -149,7 +149,7 @@ class ActionBottomSheet extends ConsumerWidget {
   }
 
   Widget _detailRow(String label, String value) => Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Row(children: [Text(label, style: const TextStyle(fontWeight: FontWeight.bold)), const Spacer(), Text(value, style: const TextStyle(fontSize: 14))]));
-
+  
   IconData _fileIcon(String ext) {
     switch (ext.toLowerCase()) {
       case 'mp4': case 'mkv': return Icons.video_library_rounded;
