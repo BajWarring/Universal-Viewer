@@ -7,7 +7,6 @@ class RecentFilesSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     
-    // Mock Data
     final recentFiles = [
       {'name': 'Production_Final_v2.mp4', 'size': '2.4 GB', 'date': 'Oct 24, 2023', 'icon': Icons.video_library, 'path': '/Internal/Movies/Work'},
       {'name': 'Invoice_Q3_Project_X.pdf', 'size': '1.2 MB', 'date': 'Oct 23, 2023', 'icon': Icons.description, 'path': '/Internal/Documents'},
@@ -41,15 +40,15 @@ class RecentFilesSection extends StatelessWidget {
               height: 88,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.2),
+                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: theme.dividerColor.withOpacity(0.1)),
+                border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
               ),
               child: Row(
                 children: [
                   CircleAvatar(
                     radius: 24,
-                    backgroundColor: theme.colorScheme.primaryContainer.withOpacity(0.3),
+                    backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
                     child: Icon(file['icon'] as IconData, color: theme.colorScheme.primary),
                   ),
                   const SizedBox(width: 16),
