@@ -12,22 +12,24 @@ dependencies:
   flutter:
     sdk: flutter
 
-  permission_handler: ^11.3.1
-
-
   # State Management & DI
   flutter_riverpod: ^2.5.1
   get_it: ^7.6.4
   go_router: ^13.2.0
+  permission_handler: ^11.3.1
 
   # Theming & UI
   google_fonts: ^6.2.1
   flutter_highlight: ^0.7.0
+  flutter_svg: ^2.0.10
 
-  # Media Players (Official & Verified)
+  # Media Players
   just_audio: ^0.9.36
   video_player: ^2.9.2
-  flutter_svg: ^2.0.10
+
+  # File System Utilities
+  archive: ^3.4.10
+  path: ^1.9.0
 
 dev_dependencies:
   flutter_lints: ^4.0.0
