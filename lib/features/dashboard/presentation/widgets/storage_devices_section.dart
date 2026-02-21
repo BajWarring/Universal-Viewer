@@ -33,15 +33,15 @@ class StorageDevicesSection extends StatelessWidget {
 
   Widget _buildStorageCard(BuildContext context, String title, String subtitle, IconData icon, ThemeData theme) {
     return InkWell(
-      onTap: () {}, // Navigate to root
+      onTap: () {},
       borderRadius: BorderRadius.circular(16),
       child: Container(
         width: 140,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.6),
+          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: theme.dividerColor.withOpacity(0.1)),
+          border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
