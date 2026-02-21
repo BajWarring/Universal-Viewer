@@ -101,3 +101,31 @@ class FileOperationNotifier extends Notifier<FileOperationState> {
 }
 
 final fileOperationProvider = NotifierProvider<FileOperationNotifier, FileOperationState>(() => FileOperationNotifier());
+
+
+
+  Future<void> executePaste(String destinationPath) async {
+    if (state.operation == FileOpType.none || state.clipboard.isEmpty) return;
+
+    final provider = sl<FileSystemProvider>(instanceName: 'local');
+    for (final item in state.clipboard) {
+      if (state.operation == FileOpType.copy) {
+        // copy logic (for folders it's recursive)
+        await _copyItem(item, destinationPath, provider);
+      } else if (state.operation == FileOpType.cut) {
+        await _moveItem(item, destinationPath, provider);
+      }
+    }
+    clearClipboard();
+  }
+
+  Future<void> _copyItem(OmniNode item, String dest, FileSystemProvider provider) async {
+    // simple implementation - you can make it more robust
+    final newPath = '\( dest/ \){item.name}';
+    // actual file copy code would go here (use File.copy / Directory copy recursive)
+    // for now placeholder
+  }
+
+  Future<void> _moveItem(OmniNode item, String dest, FileSystemProvider provider) async {
+    await provider.rename(item.path, '\( dest/ \){item.name}'); // reuse rename for move
+  }
