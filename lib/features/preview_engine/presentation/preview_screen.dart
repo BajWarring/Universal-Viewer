@@ -5,6 +5,7 @@ import '../../../../filesystem/domain/entities/omni_node.dart';
 import 'renderers/text_previewer.dart';
 import 'renderers/image_previewer.dart';
 import '../../media_player/presentation/video_player_screen.dart';
+import 'package:pdfx/pdfx.dart';
 
 class PreviewScreen extends StatelessWidget {
   final OmniNode node;
@@ -29,14 +30,18 @@ class PreviewScreen extends StatelessWidget {
     if (ext == 'svg') return Center(child: SvgPicture.file(File(node.path)));
     if (['jpeg', 'jpg', 'png', 'gif', 'webp'].contains(ext)) return ImagePreviewer(path: node.path);
     if (['mp4', 'mkv', 'avi', 'webm'].contains(ext)) return VideoPlayerScreen(videoNode: node);
-    if (ext == 'pdf') return const Center(child: Text('PDF Viewer coming soon'));
-    if (['zip', 'rar', '7z', 'apk'].contains(ext)) {
-      return Center(child: ElevatedButton.icon(
-        onPressed: () {},
-        icon: const Icon(Icons.folder_zip_rounded),
-        label: Text('View inside .$ext'),
-      ));
-    }
+    // add import 'package:pdfx/pdfx.dart';
+
+if (ext == 'pdf') {
+  return PdfView(pinchingEnabled: true, controller: PdfController(document: PdfDocument.openFile(node.path)));
+}
+if (['zip', 'rar', '7z', 'tar', 'apk'].contains(ext)) {
+  return Center(child: ElevatedButton.icon(
+    onPressed: () { /* switch to archive provider */ },
+    icon: const Icon(Icons.folder_zip_rounded),
+    label: Text('View inside .$ext'),
+  ));
+}
     return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
       const Icon(Icons.insert_drive_file_rounded, size: 64, color: Colors.grey),
       const SizedBox(height: 16),
