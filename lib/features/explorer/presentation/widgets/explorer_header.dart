@@ -14,11 +14,15 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final opState = ref.watch(fileOperationProvider);
     final dirState = ref.watch(directoryProvider);
-    final theme = Theme.of(context);
 
     if (opState.isSelectionMode) {
-      // (Keep your existing _SelectionAppBar here)
-      return const SizedBox.shrink(); // Placeholder for brevity
+      return _SelectionAppBar(
+        selectedCount: opState.selectedNodes.length,
+        onClose: () => ref.read(fileOperationProvider.notifier).clearSelection(),
+        onSelectAll: () => dirState.nodes.whenData((nodes) => ref.read(fileOperationProvider.notifier).selectAll(nodes)),
+        onDeselectAll: () => ref.read(fileOperationProvider.notifier).deselectAll(),
+        onInvert: () => dirState.nodes.whenData((nodes) => ref.read(fileOperationProvider.notifier).invertSelection(nodes)),
+      );
     }
 
     final currentFolderName = dirState.pathStack.isEmpty ? 'Storage' : dirState.pathStack.last.split('/').last;
@@ -58,7 +62,7 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
         ),
         IconButton(
           icon: const Icon(Icons.more_vert_rounded),
-          onPressed: () {}, // Implement More popup similar to Location dropdown
+          onPressed: () {}, // Implement More popup if needed
         ),
       ],
     );
@@ -68,13 +72,16 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
     final RenderBox renderBox = context.findRenderObject() as RenderBox;
     final offset = renderBox.localToGlobal(Offset.zero);
 
-    showMenu(
+    showMenu<dynamic>(
       context: context,
       position: RelativeRect.fromLTRB(16, offset.dy + kToolbarHeight + 10, 100, 0),
       color: Theme.of(context).colorScheme.surfaceContainer,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.1))),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16), 
+        side: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1))
+      ),
       elevation: 8,
-      items: [
+      items: <PopupMenuEntry<dynamic>>[
         const PopupMenuItem<String>(
           enabled: false,
           height: 30,
@@ -104,14 +111,25 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
           height: 30,
           child: Text('SWITCH DRIVE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
         ),
-        PopupMenuItem<String>(
+        const PopupMenuItem<String>(
           value: '/storage/emulated/0',
           height: 40,
           child: Row(
-            children: const [
+            children: [
               Icon(Icons.smartphone_rounded, size: 20, color: Colors.grey),
               SizedBox(width: 12),
               Text('Internal Storage', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+            ],
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: '/storage/sdcard1',
+          height: 40,
+          child: Row(
+            children: [
+              Icon(Icons.sd_card_rounded, size: 20, color: Colors.grey),
+              SizedBox(width: 12),
+              Text('SD Card', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
             ],
           ),
         ),
@@ -123,5 +141,44 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
         ref.read(directoryProvider.notifier).jumpToPath(value);
       }
     });
+  }
+}
+
+class _SelectionAppBar extends StatelessWidget implements PreferredSizeWidget {
+  final int selectedCount; 
+  final VoidCallback onClose, onSelectAll, onDeselectAll, onInvert;
+  
+  const _SelectionAppBar({required this.selectedCount, required this.onClose, required this.onSelectAll, required this.onDeselectAll, required this.onInvert});
+  
+  @override 
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  
+  @override 
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AppBar(
+      backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.3), 
+      leading: IconButton(icon: const Icon(Icons.close_rounded), onPressed: onClose), 
+      title: Text('$selectedCount selected', style: const TextStyle(fontWeight: FontWeight.bold)), 
+      actions: [
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.checklist_rounded), 
+          onSelected: (v) { 
+            if (v == 'all') {
+              onSelectAll(); 
+            } else if (v == 'none') {
+              onDeselectAll(); 
+            } else {
+              onInvert(); 
+            }
+          }, 
+          itemBuilder: (_) => const [
+            PopupMenuItem(value: 'all', child: Text('Select All')), 
+            PopupMenuItem(value: 'none', child: Text('Deselect All')), 
+            PopupMenuItem(value: 'invert', child: Text('Invert Selection'))
+          ]
+        )
+      ]
+    );
   }
 }
