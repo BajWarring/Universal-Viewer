@@ -103,7 +103,7 @@ class DashboardScreen extends ConsumerWidget {
               return InkWell(
                 onTap: () {
                   ref.read(directoryProvider.notifier).jumpToPath(folder.path);
-                  context.go('/explorer'); // Navigate to Files tab
+                  context.go('/files'); // Navigate to Files tab
                 },
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
@@ -153,7 +153,7 @@ class DashboardScreen extends ConsumerWidget {
               return InkWell(
                 onTap: () {
                   ref.read(directoryProvider.notifier).jumpToPath(drive.path);
-                  context.go('/explorer'); // Navigate to Files tab
+                  context.go('/files'); // Navigate to Files tab
                 },
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
