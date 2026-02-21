@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../../../filesystem/domain/entities/omni_node.dart';
 import 'renderers/text_previewer.dart';
 import 'renderers/image_previewer.dart';
-// Note: Ensure your PdfView and VideoPlayerScreen are optimized for fast instantiation.
 
 class UnifiedViewer extends StatelessWidget {
   final OmniNode node;
@@ -11,7 +10,7 @@ class UnifiedViewer extends StatelessWidget {
   static void show(BuildContext context, OmniNode node) {
     showGeneralDialog(
       context: context,
-      barrierColor: Theme.of(context).scaffoldBackgroundColor, // Seamless transition
+      barrierColor: Theme.of(context).scaffoldBackgroundColor,
       barrierDismissible: false,
       transitionDuration: const Duration(milliseconds: 250),
       pageBuilder: (context, animation, secondaryAnimation) => UnifiedViewer(node: node),
@@ -32,7 +31,7 @@ class UnifiedViewer extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              decoration: BoxDecoration(border: Border(bottom: BorderSide(color: theme.dividerColor.withOpacity(0.1)))),
+              decoration: BoxDecoration(border: Border(bottom: BorderSide(color: theme.dividerColor.withValues(alpha: 0.1)))),
               child: Row(
                 children: [
                   IconButton(icon: const Icon(Icons.arrow_back_rounded), onPressed: () => Navigator.pop(context)),
@@ -52,11 +51,17 @@ class UnifiedViewer extends StatelessWidget {
   }
 
   Widget _buildPreviewer(BuildContext context) {
-    // (Keep your existing switch/if logic here, it hooks perfectly into this new fast wrapper)
     final ext = node.extension.toLowerCase();
-    if (['jpeg', 'jpg', 'png', 'gif', 'webp'].contains(ext)) return ImagePreviewer(path: node.path);
-    if (['txt', 'md', 'json', 'xml', 'java', 'kt'].contains(ext)) return TextPreviewer(path: node.path, extension: ext);
-    // Add your PDF, Audio, Video fast renderers here
+    
+    if (['jpeg', 'jpg', 'png', 'gif', 'webp'].contains(ext)) {
+      return ImagePreviewer(path: node.path);
+    }
+    
+    if (['txt', 'md', 'json', 'xml', 'java', 'kt', 'gradle', 'kts', 'html', 'sql', 'csv', 'py', 'dart', 'db'].contains(ext)) {
+      return TextPreviewer(path: node.path, extension: ext);
+    }
+    
+    // Fallback View
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
