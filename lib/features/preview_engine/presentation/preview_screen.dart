@@ -30,18 +30,20 @@ class PreviewScreen extends StatelessWidget {
     if (ext == 'svg') return Center(child: SvgPicture.file(File(node.path)));
     if (['jpeg', 'jpg', 'png', 'gif', 'webp'].contains(ext)) return ImagePreviewer(path: node.path);
     if (['mp4', 'mkv', 'avi', 'webm'].contains(ext)) return VideoPlayerScreen(videoNode: node);
-    // add import 'package:pdfx/pdfx.dart';
-
-if (ext == 'pdf') {
-  return PdfView(pinchingEnabled: true, controller: PdfController(document: PdfDocument.openFile(node.path)));
-}
-if (['zip', 'rar', '7z', 'tar', 'apk'].contains(ext)) {
-  return Center(child: ElevatedButton.icon(
-    onPressed: () { /* switch to archive provider */ },
-    icon: const Icon(Icons.folder_zip_rounded),
-    label: Text('View inside .$ext'),
-  ));
-}
+    if (ext == 'pdf') {
+      return PdfView(
+        controller: PdfController(
+          document: PdfDocument.openFile(node.path),
+        ),
+      );
+    }
+    if (['zip', 'rar', '7z', 'tar', 'apk'].contains(ext)) {
+      return Center(child: ElevatedButton.icon(
+        onPressed: () {},
+        icon: const Icon(Icons.folder_zip_rounded),
+        label: Text('View inside .$ext'),
+      ));
+    }
     return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
       const Icon(Icons.insert_drive_file_rounded, size: 64, color: Colors.grey),
       const SizedBox(height: 16),
