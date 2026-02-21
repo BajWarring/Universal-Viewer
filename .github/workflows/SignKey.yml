@@ -1,0 +1,41 @@
+name: 4. Generate Signing Key
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate-key:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Generate Keystore
+        run: |
+          # Generate the keystore file (omni.jks) inside android/app
+          keytool -genkeypair -v -keystore android/app/omni.jks -keyalg RSA -keysize 2048 -validity 10000 -alias omni -dname "CN=OmniFileManager, OU=Omni, O=Omni, L=City, S=State, C=US" -storepass omni123 -keypass omni123
+
+          # Create the key.properties file inside android/
+          echo "storePassword=omni123" > android/key.properties
+          echo "keyPassword=omni123" >> android/key.properties
+          echo "keyAlias=omni" >> android/key.properties
+          echo "storeFile=omni.jks" >> android/key.properties
+
+      - name: Commit and Push Key
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          
+          # FIX: Use -f to force add files even if they are in .gitignore
+          git add -f android/app/omni.jks android/key.properties
+          
+          git commit -m "Add permanent signing key"
+          git push
