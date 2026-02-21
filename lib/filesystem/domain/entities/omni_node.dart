@@ -15,7 +15,6 @@ class OmniNode {
     required this.extension,
   });
 
-  // Helper method to copy with changes (useful for renaming)
   OmniNode copyWith({
     String? name,
     String? path,
@@ -33,4 +32,39 @@ class OmniNode {
       extension: extension ?? this.extension,
     );
   }
+}
+
+// Subclass specifically for files
+class OmniFile extends OmniNode {
+  const OmniFile({
+    required String name,
+    required String path,
+    required int size,
+    required DateTime modified,
+    required String extension,
+  }) : super(
+          name: name,
+          path: path,
+          size: size,
+          modified: modified,
+          isFolder: false,
+          extension: extension,
+        );
+}
+
+// Subclass specifically for folders
+class OmniFolder extends OmniNode {
+  const OmniFolder({
+    required String name,
+    required String path,
+    required DateTime modified,
+    int size = 0, // Folders default to 0 size unless explicitly calculated
+  }) : super(
+          name: name,
+          path: path,
+          size: size,
+          modified: modified,
+          isFolder: true,
+          extension: '',
+        );
 }
