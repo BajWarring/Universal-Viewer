@@ -50,7 +50,7 @@ class FileListView extends ConsumerWidget {
                 : Icon(node.isFolder ? Icons.folder_rounded : _fileIcon(node.extension), color: node.isFolder ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant),
           ),
           title: Text(node.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w500)),
-          subtitle: Text(node.isFolder ? node.name + ' Folder' : _formatBytes(node.size), style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
+          subtitle: Text(node.isFolder ? '${node.name} Folder' : _formatBytes(node.size), style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
           trailing: Row(mainAxisSize: MainAxisSize.min, children: [
             Text(_formatDate(node.modified), style: TextStyle(fontSize: 12, color: Colors.grey)),
             if (!opState.isSelectionMode)
