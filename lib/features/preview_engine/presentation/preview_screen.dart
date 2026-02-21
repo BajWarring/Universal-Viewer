@@ -4,7 +4,6 @@ import 'dart:io';
 import '../../../../filesystem/domain/entities/omni_node.dart';
 import 'renderers/text_previewer.dart';
 import '../../media_player/presentation/video_player_screen.dart';
-import '../../media_player/application/audio_notifier.dart'; // Ensure you import your AudioNotifier
 
 class PreviewScreen extends StatelessWidget {
   final OmniNode node;
