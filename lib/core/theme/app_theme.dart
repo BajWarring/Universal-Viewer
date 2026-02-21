@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
+  // HTML Prototype exact animation curves
+  static const Curve emphasizedCurve = Cubic(0.16, 1.0, 0.3, 1.0);
+  static const Duration standardDuration = Duration(milliseconds: 200);
+  static const Duration modalDuration = Duration(milliseconds: 300);
+
   static const Map<String, Color> themeColors = {
     "Simple Light": Color(0xFF135BEC),
     "Simple Dark": Color(0xFF135BEC),
@@ -20,6 +26,7 @@ class AppTheme {
     ColorScheme? dynamicColorScheme,
   }) {
     ColorScheme colorScheme;
+
     if (themeName == "Material You Dynamic" && dynamicColorScheme != null) {
       colorScheme = dynamicColorScheme;
     } else {
@@ -27,6 +34,7 @@ class AppTheme {
       colorScheme = ColorScheme.fromSeed(seedColor: seedColor, brightness: brightness);
     }
 
+    // Exact color mapping from HTML Prototype CSS Variables
     if (brightness == Brightness.dark) {
       if (themeName == "Pure Black") {
         colorScheme = colorScheme.copyWith(
@@ -36,14 +44,14 @@ class AppTheme {
         );
       } else {
         colorScheme = colorScheme.copyWith(
-          surface: const Color(0xFF101622),
-          surfaceContainer: const Color(0xFF1D2636),
+          surface: const Color(0xFF101622), // --color-bg-dark
+          surfaceContainer: const Color(0xFF1D2636), // --color-surface-dark
           surfaceContainerHighest: const Color(0xFF243041),
         );
       }
     } else {
       colorScheme = colorScheme.copyWith(
-        surface: const Color(0xFFF6F6F8),
+        surface: const Color(0xFFF6F6F8), // background-light
         surfaceContainer: const Color(0xFFFFFFFF),
         surfaceContainerHighest: const Color(0xFFEEEEF2),
       );
@@ -52,7 +60,9 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      fontFamily: 'Inter',
+      textTheme: GoogleFonts.interTextTheme(
+        ThemeData(brightness: brightness).textTheme,
+      ),
       scaffoldBackgroundColor: colorScheme.surface,
       appBarTheme: AppBarTheme(
         backgroundColor: colorScheme.surface,
@@ -62,7 +72,7 @@ class AppTheme {
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: colorScheme.surfaceContainer,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)), // mapped to xl
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
@@ -76,9 +86,13 @@ class AppTheme {
         }),
       ),
       cardTheme: CardTheme(
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 0, // soft elevation handled via shadow
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), // mapped to lg
         color: colorScheme.surfaceContainer,
+      ),
+      dialogTheme: DialogTheme(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)), // mapped to xl
+        backgroundColor: colorScheme.surfaceContainer,
       ),
     );
   }
