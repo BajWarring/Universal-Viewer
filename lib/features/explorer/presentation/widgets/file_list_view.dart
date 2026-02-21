@@ -52,7 +52,7 @@ class FileListView extends ConsumerWidget {
           title: Text(node.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w500)),
           subtitle: Text(node.isFolder ? '${node.name} Folder' : _formatBytes(node.size), style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
           trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-            Text(_formatDate(node.modified), style: TextStyle(fontSize: 12, color: Colors.grey)),
+            Text(_formatDate(node.modified), style: const TextStyle(fontSize: 12, color: Colors.grey)),
             if (!opState.isSelectionMode)
               IconButton(icon: const Icon(Icons.more_vert_rounded, size: 20), onPressed: () => ActionBottomSheet.show(context, node)),
           ]),
@@ -94,6 +94,6 @@ class FileListView extends ConsumerWidget {
   }
 
   String _formatDate(DateTime date) {
-    return '\( {date.year}- \){date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 }
