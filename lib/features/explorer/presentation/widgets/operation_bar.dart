@@ -32,7 +32,7 @@ class OperationBar extends ConsumerWidget {
           children: [
             Container(
               width: 40, height: 40,
-              decoration: BoxDecoration(color: theme.colorScheme.surface.withOpacity(0.2), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: theme.colorScheme.surface.withValues(alpha: 0.2), shape: BoxShape.circle),
               child: Icon(icon, color: theme.colorScheme.surface, size: 20),
             ),
             const SizedBox(width: 12),
@@ -41,14 +41,14 @@ class OperationBar extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(title.toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: theme.colorScheme.surface.withOpacity(0.7))),
+                  Text(title.toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: theme.colorScheme.surface.withValues(alpha: 0.7))),
                   Text('${opState.clipboard.length} item(s)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: theme.colorScheme.surface)),
                 ],
               ),
             ),
             TextButton(
               onPressed: () => ref.read(fileOperationProvider.notifier).clearClipboard(),
-              child: Text('Cancel', style: TextStyle(color: theme.colorScheme.surface.withOpacity(0.8), fontWeight: FontWeight.bold)),
+              child: Text('Cancel', style: TextStyle(color: theme.colorScheme.surface.withValues(alpha: 0.8), fontWeight: FontWeight.bold)),
             ),
             FilledButton(
               onPressed: () {
