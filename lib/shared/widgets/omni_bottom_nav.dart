@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../features/media_player/presentation/floating_audio_player.dart';
+import '../../../features/media_player/presentation/floating_video_player.dart';
 
 class OmniBottomNav extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
@@ -11,18 +12,21 @@ class OmniBottomNav extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      // PHASE 4: FloatingAudioPlayer lives here so it persists across all tabs
+      // PHASE 4: FloatingAudioVideoPlayer lives here so it persists across all tabs
+      
+
       body: Stack(children: [
         navigationShell,
         Positioned(
           bottom: 0, left: 0, right: 0,
           child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const FloatingVideoPlayer(), // <-- Added here
             const FloatingAudioPlayer(),
-            // Bottom nav spacing buffer
             SizedBox(height: MediaQuery.of(context).padding.bottom > 0 ? 0 : 8),
           ]),
         ),
       ]),
+
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3))),
