@@ -66,8 +66,7 @@ class FileListView extends ConsumerWidget {
             } else {
               if (node.isFolder) {
                 ref.read(directoryProvider.notifier).navigateTo(node.name);
-              } else {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => PreviewScreen(node: node)));
+              } else { UnifiedViewer.show(context, node); }
               }
             }
           },
