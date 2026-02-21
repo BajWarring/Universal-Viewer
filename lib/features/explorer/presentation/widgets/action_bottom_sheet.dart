@@ -35,7 +35,7 @@ class ActionBottomSheet extends ConsumerWidget {
       child: SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(width: 40, height: 4, margin: const EdgeInsets.only(top: 12, bottom: 4),
-              decoration: BoxDecoration(color: theme.colorScheme.outlineVariant, borderRadius: BorderRadius.circular(2))),
+            decoration: BoxDecoration(color: theme.colorScheme.outlineVariant, borderRadius: BorderRadius.circular(2))),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
             child: Row(children: [
@@ -189,3 +189,4 @@ class _ActionTile extends StatelessWidget {
       ),
     );
   }
+}
