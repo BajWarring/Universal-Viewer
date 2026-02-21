@@ -40,7 +40,7 @@ class _CompressDialogState extends ConsumerState<CompressDialog> {
     super.dispose();
   }
 
-  Future<void> _startCompression() async {
+    Future<void> _startCompression() async {
     setState(() => _isProcessing = true);
     final destPath = '${widget.sourceNode.path}_compressed$_selectedFormat';
     final params = CompressParams(
@@ -49,19 +49,29 @@ class _CompressDialogState extends ConsumerState<CompressDialog> {
       format: _selectedFormat.replaceAll('.', ''),
       password: _passwordController.text.isEmpty ? null : _passwordController.text,
     );
+    
     try {
       await _archiveService.compressDirectory(params);
-      if (_deleteSource) {}
-      if (context.mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Archive Created!')));
+      
+      if (_deleteSource) {
+        // TODO: Implement source deletion if checked
       }
+      
+      // Early return to completely satisfy the async gap linter
+      if (!mounted) return; 
+      
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Archive Created!')));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
-      if (mounted) setState(() => _isProcessing = false);
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
