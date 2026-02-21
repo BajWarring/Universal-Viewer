@@ -103,8 +103,11 @@ class ActionBottomSheet extends ConsumerWidget {
   }
 
   void _openNode(BuildContext context, WidgetRef ref) {
-    if (node.isFolder) ref.read(directoryProvider.notifier).navigateTo(node.name);
-    else Navigator.push(context, MaterialPageRoute(builder: (_) => PreviewScreen(node: node)));
+    if (node.isFolder) {
+      ref.read(directoryProvider.notifier).navigateTo(node.name);
+    } else {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => PreviewScreen(node: node)));
+    }
   }
 
   void _openWith(BuildContext context) => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Opening with system apps...')));
@@ -122,7 +125,13 @@ class ActionBottomSheet extends ConsumerWidget {
       Row(children: [
         Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel'))),
         const SizedBox(width: 12),
-        Expanded(child: FilledButton(onPressed: () async { await ref.read(directoryProvider.notifier).deleteNode(node); Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${node.name} deleted'))); }, style: FilledButton.styleFrom(backgroundColor: Colors.red), child: const Text('Delete'))),
+        Expanded(child: FilledButton(onPressed: () async {
+          await ref.read(directoryProvider.notifier).deleteNode(node);
+          if (mounted) {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${node.name} deleted')));
+          }
+        }, style: FilledButton.styleFrom(backgroundColor: Colors.red), child: const Text('Delete'))),
       ]),
     ])));
   }
