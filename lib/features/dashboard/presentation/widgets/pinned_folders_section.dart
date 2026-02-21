@@ -7,7 +7,6 @@ class PinnedFoldersSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     
-    // Mock data based on your HTML
     final folders = [
       {'name': 'Camera', 'items': '120 items', 'icon': Icons.folder},
       {'name': 'Downloads', 'items': '45 items', 'icon': Icons.folder},
@@ -43,15 +42,15 @@ class PinnedFoldersSection extends StatelessWidget {
             itemBuilder: (context, index) {
               final folder = folders[index];
               return InkWell(
-                onTap: () {}, // Navigate to folder
+                onTap: () {},
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
                   width: 110,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.4),
+                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: theme.dividerColor.withOpacity(0.1)),
+                    border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
