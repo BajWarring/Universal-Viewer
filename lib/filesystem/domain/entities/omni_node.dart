@@ -1,45 +1,36 @@
-abstract class OmniNode {
-  final String id;
+class OmniNode {
   final String name;
   final String path;
   final int size;
-  final DateTime modifiedAt;
-  final bool isHidden;
+  final DateTime modified;
+  final bool isFolder;
+  final String extension;
 
   const OmniNode({
-    required this.id,
     required this.name,
     required this.path,
     required this.size,
-    required this.modifiedAt,
-    required this.isHidden,
+    required this.modified,
+    required this.isFolder,
+    required this.extension,
   });
 
-  bool get isFolder => this is OmniFolder;
-  String get extension => name.contains('.') ? name.split('.').last.toLowerCase() : '';
-}
-
-class OmniFolder extends OmniNode {
-  final int? itemCount; // Nullable because counting remote items can be expensive
-
-  const OmniFolder({
-    required super.id,
-    required super.name,
-    required super.path,
-    required super.size,
-    required super.modifiedAt,
-    required super.isHidden,
-    this.itemCount,
-  });
-}
-
-class OmniFile extends OmniNode {
-  const OmniFile({
-    required super.id,
-    required super.name,
-    required super.path,
-    required super.size,
-    required super.modifiedAt,
-    required super.isHidden,
-  });
+  // Helper method to copy with changes (useful for renaming)
+  OmniNode copyWith({
+    String? name,
+    String? path,
+    int? size,
+    DateTime? modified,
+    bool? isFolder,
+    String? extension,
+  }) {
+    return OmniNode(
+      name: name ?? this.name,
+      path: path ?? this.path,
+      size: size ?? this.size,
+      modified: modified ?? this.modified,
+      isFolder: isFolder ?? this.isFolder,
+      extension: extension ?? this.extension,
+    );
+  }
 }
