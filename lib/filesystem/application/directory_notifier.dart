@@ -83,7 +83,7 @@ class DirectoryNotifier extends Notifier<DirectoryState> {
 
   Future<void> deleteNode(OmniNode node) async {
     await _localProvider.delete(node.path);
-    loadDirectory(currentPath);
+    loadDirectory(state.currentPath);
   }
 }
 
