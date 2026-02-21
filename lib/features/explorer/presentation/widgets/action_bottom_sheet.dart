@@ -105,15 +105,13 @@ class ActionBottomSheet extends ConsumerWidget {
   void _openNode(BuildContext context, WidgetRef ref) {
     if (node.isFolder) {
       ref.read(directoryProvider.notifier).navigateTo(node.name);
-    } else { UnifiedViewer.show(context, node); }
-
+    } else {
+      UnifiedViewer.show(context, node);
     }
   }
 
   void _openWith(BuildContext context) => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Opening with system apps...')));
-  
   void _extractHere(BuildContext context) => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Extracting here...')));
-
   void _extractTo(BuildContext context) => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Choose destination...')));
   
   void _showRename(BuildContext context) => showModalBottomSheet(context: context, isScrollControlled: true, builder: (_) => Padding(padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom), child: RenameDialog(node: node)));
@@ -149,7 +147,7 @@ class ActionBottomSheet extends ConsumerWidget {
   }
 
   Widget _detailRow(String label, String value) => Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Row(children: [Text(label, style: const TextStyle(fontWeight: FontWeight.bold)), const Spacer(), Text(value, style: const TextStyle(fontSize: 14))]));
-  
+
   IconData _fileIcon(String ext) {
     switch (ext.toLowerCase()) {
       case 'mp4': case 'mkv': return Icons.video_library_rounded;
@@ -180,6 +178,7 @@ class _ActionTile extends StatelessWidget {
   final _SheetAction action;
   final ThemeData theme;
   const _ActionTile({required this.action, required this.theme});
+  
   @override
   Widget build(BuildContext context) {
     final color = action.isDestructive ? theme.colorScheme.error : theme.colorScheme.onSurface;
