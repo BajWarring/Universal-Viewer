@@ -55,7 +55,24 @@ class FileGridView extends ConsumerWidget {
     );
   }
 
-  IconData _fileIcon(String ext) { /* same as list view */ return Icons.insert_drive_file_rounded; }
-  String _formatBytes(int bytes) { /* same */ return '$bytes B'; }
-  String _formatDate(DateTime date) { /* same */ return '\( {date.year}- \){date.month.toString().padLeft(2,'0')}-${date.day.toString().padLeft(2,'0')}'; }
+  IconData _fileIcon(String ext) {
+    switch (ext.toLowerCase()) {
+      case 'mp4': case 'mkv': return Icons.video_library_rounded;
+      case 'mp3': return Icons.music_note_rounded;
+      case 'jpg': case 'png': return Icons.image_rounded;
+      case 'pdf': return Icons.picture_as_pdf_rounded;
+      case 'zip': case 'rar': case '7z': return Icons.folder_zip_rounded;
+      default: return Icons.insert_drive_file_rounded;
+    }
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  String _formatDate(DateTime date) {
+    return '\( {date.year}- \){date.month.toString().padLeft(2,'0')}-${date.day.toString().padLeft(2,'0')}';
+  }
 }
