@@ -72,7 +72,6 @@ class ActionBottomSheet extends ConsumerWidget {
 
   List<_SheetAction> _buildActions(BuildContext context, WidgetRef ref) {
     final isArchive = ['zip','rar','7z','tar','apk'].contains(node.extension.toLowerCase());
-
     if (node.isFolder || isArchive) {
       return [
         _SheetAction('Open', Icons.folder_open_rounded, () { Navigator.pop(context); _openNode(context, ref); }),
@@ -136,16 +135,57 @@ class ActionBottomSheet extends ConsumerWidget {
       _detailRow('Location', node.path),
       _detailRow('Modified', node.modified.toString().split('.').first),
       const SizedBox(height: 16),
-      OutlinedButton.icon(icon: const Icon(Icons.copy), label: const Text('Copy path'), onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Path copied to clipboard')))),
+      OutlinedButton.icon(icon: const Icon(Icons.copy), label: const Text('Copy path'), onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Path copied')))),
     ])));
   }
 
   Widget _detailRow(String label, String value) => Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Row(children: [Text(label, style: const TextStyle(fontWeight: FontWeight.bold)), const Spacer(), Text(value, style: const TextStyle(fontSize: 14))]));
 
-  IconData _fileIcon(String ext) { /* keep your existing _fileIcon */ return Icons.insert_drive_file_rounded; }
-  String _formatBytes(int bytes) { /* keep your existing */ return '$bytes B'; }
+  IconData _fileIcon(String ext) {
+    switch (ext.toLowerCase()) {
+      case 'mp4': case 'mkv': return Icons.video_library_rounded;
+      case 'mp3': return Icons.music_note_rounded;
+      case 'jpg': case 'png': return Icons.image_rounded;
+      case 'pdf': return Icons.picture_as_pdf_rounded;
+      case 'zip': case 'rar': case '7z': return Icons.folder_zip_rounded;
+      default: return Icons.insert_drive_file_rounded;
+    }
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
 }
 
-class _SheetAction { final String label; final IconData icon; final VoidCallback onTap; final bool isDestructive; const _SheetAction(this.label, this.icon, this.onTap, {this.isDestructive = false}); }
+class _SheetAction {
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool isDestructive;
+  const _SheetAction(this.label, this.icon, this.onTap, {this.isDestructive = false});
+}
 
-class _ActionTile extends StatelessWidget { /* keep your existing _ActionTile */ }
+class _ActionTile extends StatelessWidget {
+  final _SheetAction action;
+  final ThemeData theme;
+  const _ActionTile({required this.action, required this.theme});
+  @override
+  Widget build(BuildContext context) {
+    final color = action.isDestructive ? theme.colorScheme.error : theme.colorScheme.onSurface;
+    final bg = action.isDestructive ? theme.colorScheme.errorContainer.withValues(alpha: 0.3) : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6);
+    return InkWell(
+      onTap: action.onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
+        child: Row(children: [
+          Icon(action.icon, size: 18, color: action.isDestructive ? theme.colorScheme.error : theme.colorScheme.primary),
+          const SizedBox(width: 8),
+          Flexible(child: Text(action.label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color), overflow: TextOverflow.ellipsis)),
+        ]),
+      ),
+    );
+  }
