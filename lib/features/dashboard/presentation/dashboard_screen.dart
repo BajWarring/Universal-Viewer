@@ -23,14 +23,8 @@ class DashboardScreen extends ConsumerWidget {
             Icon(Icons.folder_off_rounded, size: 72, color: theme.colorScheme.error),
             const SizedBox(height: 16),
             const Text('Storage Access Required', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text('Omni needs permission to view and manage your files.', textAlign: TextAlign.center),
-            ),
-            FilledButton(
-              onPressed: () => ref.read(dashboardProvider.notifier).requestPermissionRetry(),
-              child: const Text('Grant Permission'),
-            ),
+            const Padding(padding: EdgeInsets.all(16.0), child: Text('Omni needs permission to view and manage your files.', textAlign: TextAlign.center)),
+            FilledButton(onPressed: () => ref.read(dashboardProvider.notifier).requestPermissionRetry(), child: const Text('Grant Permission')),
           ]),
         ),
       );
@@ -44,10 +38,7 @@ class DashboardScreen extends ConsumerWidget {
         ]),
         actions: [
           IconButton(icon: const Icon(Icons.search_rounded), onPressed: () {}),
-          IconButton(
-            icon: const Icon(Icons.settings_rounded),
-            onPressed: () => context.go('/settings'),
-          ),
+          IconButton(icon: const Icon(Icons.settings_rounded), onPressed: () => context.go('/settings')),
         ],
       ),
       body: SingleChildScrollView(
@@ -61,10 +52,7 @@ class DashboardScreen extends ConsumerWidget {
           const SizedBox(height: 8),
           _buildStorageDrives(context, ref, dashState.storageDrives, theme),
           const SizedBox(height: 20),
-          _buildSectionHeader(context, 'RECENT FILES', trailing: TextButton(
-            onPressed: () {},
-            child: Text('View all', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
-          )),
+          _buildSectionHeader(context, 'RECENT FILES', trailing: TextButton(onPressed: () {}, child: Text('View all', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.primary)))),
           _buildRecentFiles(context, dashState.recentFiles, theme),
           const SizedBox(height: 100),
         ]),
@@ -96,7 +84,6 @@ class DashboardScreen extends ConsumerWidget {
           return InkWell(
             onTap: () {
               ref.read(directoryProvider.notifier).jumpToPath(folder.path);
-              // PHASE 1 FIX: correct route is /files
               context.go('/files');
             },
             borderRadius: BorderRadius.circular(16),
@@ -133,7 +120,6 @@ class DashboardScreen extends ConsumerWidget {
           return InkWell(
             onTap: () {
               ref.read(directoryProvider.notifier).jumpToPath(drive.path);
-              // PHASE 1 FIX: correct route is /files
               context.go('/files');
             },
             borderRadius: BorderRadius.circular(20),
@@ -146,7 +132,6 @@ class DashboardScreen extends ConsumerWidget {
                 border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3)),
               ),
               child: Column(children: [
-                // PHASE 2: Storage ring visualization
                 SizedBox(
                   width: 52, height: 52,
                   child: Stack(alignment: Alignment.center, children: [
