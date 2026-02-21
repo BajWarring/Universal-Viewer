@@ -1,55 +1,40 @@
 import 'dart:io';
 import 'package:archive/archive_io.dart';
+import 'package:path/path.dart' as p;
 import '../../../../filesystem/domain/entities/omni_node.dart';
 import '../../../../filesystem/domain/repositories/file_system_provider.dart';
 
 class ArchiveFileSystemProvider implements FileSystemProvider {
-  final String archiveFilePath;
-  late Archive _archive;
-  bool _isLoaded = false;
-
-  ArchiveFileSystemProvider(this.archiveFilePath);
-
   @override
-  String get providerId => 'archive_provider';
+  Future<List<OmniNode>> listDirectory(String path) async {
+    final file = File(path);
+    if (!await file.exists()) return [];
 
-  @override
-  String get displayName => archiveFilePath.split('/').last;
-
-  Future<void> _loadArchiveHeaders() async {
-    if (_isLoaded) return;
-    // We only read the headers to save RAM, not the full file contents
-    final inputStream = InputFileStream(archiveFilePath);
-    _archive = ZipDecoder().decodeBuffer(inputStream, verify: false);
-    _isLoaded = true;
-  }
-
-  @override
-  Future<List<OmniNode>> listDirectory(String virtualPath) async {
-    await _loadArchiveHeaders();
-    final List<OmniNode> nodes = [];
+    final bytes = await file.readAsBytes();
+    final archive = ZipDecoder().decodeBytes(bytes);
     
-    // Logic to filter the _archive files based on the requested virtualPath
-    // so we only return the files inside the current "folder" of the ZIP.
-    for (final file in _archive) {
-      if (file.name.startsWith(virtualPath)) {
-         // Map to OmniNode (omitted string parsing for brevity)
-         nodes.add(OmniFile(
-           id: file.name,
-           name: file.name.split('/').last,
-           path: file.name, // The virtual path inside the zip
-           size: file.size,
-           modifiedAt: DateTime.now(),
-           isHidden: false,
-         ));
+    final List<OmniNode> nodes = [];
+    final now = DateTime.now();
+
+    for (var file in archive) {
+      final name = p.basename(file.name);
+      
+      if (file.isFile) {
+        nodes.add(OmniFile(
+          name: name,
+          path: '$path/${file.name}', // Virtual path
+          size: file.size,
+          modified: now, 
+          extension: p.extension(file.name).replaceAll('.', ''),
+        ));
+      } else {
+        nodes.add(OmniFolder(
+          name: name,
+          path: '$path/${file.name}',
+          modified: now,
+        ));
       }
     }
     return nodes;
   }
-
-  // File operations inside a zip are generally not supported without full extraction/recompression
-  @override Future<void> createFolder(String path, String folderName) async => throw UnimplementedError();
-  @override Future<void> rename(String path, String newName) async => throw UnimplementedError();
-  @override Future<void> delete(String path) async => throw UnimplementedError();
-  @override Future<List<OmniFolder>> getRoots() async => [];
 }
