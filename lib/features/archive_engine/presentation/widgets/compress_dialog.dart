@@ -51,16 +51,15 @@ class _CompressDialogState extends ConsumerState<CompressDialog> {
     // In a production scenario, you would grab the parent directory path
     final destPath = '${widget.sourceNode.path}_compressed$_selectedFormat';
     
-    final params = CompressParams(
-      widget.sourceNode.path, 
-      destPath, 
-      _selectedFormat, 
-      _passwordController.text,
-    );
-
-    try {
-      await ArchiveService.compressDirectory(params);
-      if (_deleteSource) {
+    final service = ArchiveService();
+final params = CompressParams(
+  sourcePath: widget.sourceNode.path,
+  destinationPath: destPath,
+  format: _selectedFormat,
+  // password: _passwordController.text, // Add this field to CompressParams if needed
+);
+await service.compressDirectory(params);
+    if (_deleteSource) {
         // Trigger delete logic from your fileOpProvider
       }
       if (mounted) {
