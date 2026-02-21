@@ -22,7 +22,7 @@ dependencies:
   google_fonts: ^6.2.1
   flutter_highlight: ^0.7.0
   flutter_svg: ^2.0.10
-  dynamic_color: ^1.7.0
+  dynamic_color: 1.7.0
 
   # Media Players
   just_audio: ^0.9.36
