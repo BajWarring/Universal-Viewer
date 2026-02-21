@@ -26,11 +26,11 @@ class TextPreviewer extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.only(left: 12, right: 12, top: 16, bottom: 16),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                  border: Border(right: BorderSide(color: Theme.of(context).dividerColor.withOpacity(0.2))),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                  border: Border(right: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.2))),
                 ),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.end,
-                  children: List.generate(lineCount, (i) => Text('${i + 1}', style: textStyle.copyWith(color: Colors.grey.withOpacity(0.7))))),
+                  children: List.generate(lineCount, (i) => Text('${i + 1}', style: textStyle.copyWith(color: Colors.grey.withValues(alpha: 0.7))))),
               ),
               HighlightView(content, language: extension, theme: atomOneDarkTheme, padding: const EdgeInsets.all(16), textStyle: textStyle),
             ]),

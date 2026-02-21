@@ -170,16 +170,20 @@ class _SelectionAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return AppBar(
-      backgroundColor: theme.colorScheme.primaryContainer.withOpacity(0.3),
+      backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
       leading: IconButton(icon: const Icon(Icons.close_rounded), onPressed: onClose),
       title: Text('$selectedCount selected', style: const TextStyle(fontWeight: FontWeight.bold)),
       actions: [
         PopupMenuButton<String>(
           icon: const Icon(Icons.checklist_rounded),
           onSelected: (v) {
-            if (v == 'all') onSelectAll();
-            else if (v == 'none') onDeselectAll();
-            else onInvert();
+            if (v == 'all') {
+              onSelectAll();
+            } else if (v == 'none') {
+              onDeselectAll();
+            } else {
+              onInvert();
+            }
           },
           itemBuilder: (_) => const [
             PopupMenuItem(value: 'all', child: Text('Select All')),

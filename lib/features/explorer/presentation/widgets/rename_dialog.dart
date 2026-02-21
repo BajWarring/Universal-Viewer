@@ -34,19 +34,20 @@ class _RenameDialogState extends ConsumerState<RenameDialog> {
 
   Future<void> _performRename() async {
     final newName = _controller.text.trim();
-    if (newName.isEmpty || newName == widget.node.name) { Navigator.pop(context); return; }
+    if (newName.isEmpty || newName == widget.node.name) {
+      if (mounted) Navigator.pop(context);
+      return;
+    }
     try {
       final oldFile = File(widget.node.path);
       final newPath = widget.node.path.replaceAll(widget.node.name, newName);
       await oldFile.rename(newPath);
-      if (context.mounted) {
-        ref.read(directoryProvider.notifier).loadDirectory(ref.read(directoryProvider).currentPath);
-        Navigator.pop(context);
-      }
+      if (!mounted) return;
+      ref.read(directoryProvider.notifier).loadDirectory(ref.read(directoryProvider).currentPath);
+      Navigator.pop(context);
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to rename: $e')));
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to rename: $e')));
     }
   }
 

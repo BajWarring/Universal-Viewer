@@ -66,8 +66,8 @@ class AppTheme {
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: colorScheme.surface.withOpacity(0.95),
-        indicatorColor: colorScheme.primary.withOpacity(0.15),
+        backgroundColor: colorScheme.surface.withValues(alpha: 0.95),
+        indicatorColor: colorScheme.primary.withValues(alpha: 0.15),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: colorScheme.primary);

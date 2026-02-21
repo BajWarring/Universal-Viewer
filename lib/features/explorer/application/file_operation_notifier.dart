@@ -49,7 +49,11 @@ class FileOperationNotifier extends Notifier<FileOperationState> {
 
   void toggleSelection(OmniNode node) {
     final newSel = Set<OmniNode>.from(state.selectedNodes);
-    if (newSel.contains(node)) newSel.remove(node); else newSel.add(node);
+    if (newSel.contains(node)) {
+      newSel.remove(node);
+    } else {
+      newSel.add(node);
+    }
     state = state.copyWith(selectedNodes: newSel);
   }
 

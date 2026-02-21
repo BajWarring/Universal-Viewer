@@ -29,7 +29,7 @@ class FileListView extends ConsumerWidget {
     return ListView.separated(
       padding: const EdgeInsets.only(bottom: 96),
       itemCount: sorted.length,
-      separatorBuilder: (_, __) => Divider(height: 1, color: theme.dividerColor.withOpacity(0.08)),
+      separatorBuilder: (_, __) => Divider(height: 1, color: theme.dividerColor.withValues(alpha: 0.08)),
       itemBuilder: (context, index) {
         final node = sorted[index];
         final isSelected = opState.selectedNodes.contains(node);
@@ -37,7 +37,7 @@ class FileListView extends ConsumerWidget {
         return ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           selected: isSelected,
-          selectedTileColor: theme.colorScheme.primaryContainer.withOpacity(0.25),
+          selectedTileColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.25),
           leading: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             width: 44, height: 44,

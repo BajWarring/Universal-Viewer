@@ -106,7 +106,7 @@ class DashboardScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: theme.colorScheme.surfaceContainer,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+                border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
               ),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                 Icon(Icons.folder_special_rounded, color: theme.colorScheme.primary, size: 28),
@@ -143,7 +143,7 @@ class DashboardScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: theme.colorScheme.surfaceContainer,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.3)),
+                border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3)),
               ),
               child: Column(children: [
                 // PHASE 2: Storage ring visualization
@@ -152,7 +152,7 @@ class DashboardScreen extends ConsumerWidget {
                   child: Stack(alignment: Alignment.center, children: [
                     CircularProgressIndicator(
                       value: isInternal ? 0.25 : 0.60,
-                      backgroundColor: theme.colorScheme.outlineVariant.withOpacity(0.3),
+                      backgroundColor: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
                       color: theme.colorScheme.primary,
                       strokeWidth: 3,
                       strokeCap: StrokeCap.round,
@@ -188,11 +188,11 @@ class DashboardScreen extends ConsumerWidget {
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainer,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.3)),
+            border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3)),
           ),
           child: Row(children: [
             CircleAvatar(
-              backgroundColor: theme.colorScheme.primaryContainer.withOpacity(0.5),
+              backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
               child: Icon(Icons.insert_drive_file_rounded, color: theme.colorScheme.primary),
             ),
             const SizedBox(width: 12),

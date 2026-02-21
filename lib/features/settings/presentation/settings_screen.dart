@@ -19,7 +19,7 @@ class SettingsScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: theme.colorScheme.surfaceContainer,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.3)),
+              border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3)),
             ),
             child: Column(
               children: List.generate(appSettingsSchema.length, (index) {
@@ -39,7 +39,7 @@ class SettingsScreen extends StatelessWidget {
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SettingsCategoryScreen(category: category))),
                   ),
-                  if (!isLast) Divider(height: 1, indent: 72, color: theme.colorScheme.outlineVariant.withOpacity(0.3)),
+                  if (!isLast) Divider(height: 1, indent: 72, color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3)),
                 ]);
               }),
             ),

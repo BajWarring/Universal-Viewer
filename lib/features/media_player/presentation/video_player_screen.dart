@@ -47,7 +47,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             Positioned(top: 0, left: 0, right: 0,
               child: Container(
                 padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 8, bottom: 8, left: 8, right: 8),
-                decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black54, Colors.transparent])),
+                decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: const [Colors.black54, Colors.transparent])),
                 child: Row(children: [
                   IconButton(icon: const Icon(Icons.arrow_back_rounded, color: Colors.white), onPressed: () => Navigator.pop(context)),
                   Expanded(child: Text(widget.videoNode.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
@@ -57,9 +57,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             Positioned(bottom: 0, left: 0, right: 0,
               child: Container(
                 padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 12, top: 16, left: 8, right: 8),
-                decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.bottomCenter, end: Alignment.topCenter, colors: [Colors.black54, Colors.transparent])),
+                decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.bottomCenter, end: Alignment.topCenter, colors: const [Colors.black54, Colors.transparent])),
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  VideoProgressIndicator(_controller, allowScrubbing: true, colors: VideoProgressColors(playedColor: Colors.white, bufferedColor: Colors.white38, backgroundColor: Colors.white12)),
+                  VideoProgressIndicator(_controller, allowScrubbing: true, colors: const VideoProgressColors(playedColor: Colors.white, bufferedColor: Colors.white38, backgroundColor: Colors.white12)),
                   Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                     IconButton(
                       icon: Icon(_controller.value.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded, color: Colors.white, size: 32),

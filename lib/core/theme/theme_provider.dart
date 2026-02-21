@@ -26,8 +26,11 @@ class ThemeNotifier extends Notifier<ThemeState> {
 
   void setThemeName(String name) {
     ThemeMode mode = state.themeMode;
-    if (name == 'Simple Light') mode = ThemeMode.light;
-    else if (name == 'Simple Dark' || name == 'Pure Black') mode = ThemeMode.dark;
+    if (name == 'Simple Light') {
+      mode = ThemeMode.light;
+    } else if (name == 'Simple Dark' || name == 'Pure Black') {
+      mode = ThemeMode.dark;
+    }
     state = ThemeState(themeName: name, themeMode: mode);
   }
 

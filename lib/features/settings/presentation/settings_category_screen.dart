@@ -108,7 +108,7 @@ class SettingsCategoryScreen extends ConsumerWidget {
                             Container(
                               width: 56, height: 56,
                               decoration: BoxDecoration(
-                                color: color.withOpacity(0.15),
+                                color: color.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(color: isActive ? color : theme.colorScheme.outlineVariant, width: isActive ? 2.5 : 1),
                               ),

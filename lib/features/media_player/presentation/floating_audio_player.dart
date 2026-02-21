@@ -24,7 +24,7 @@ class FloatingAudioPlayer extends ConsumerWidget {
         decoration: BoxDecoration(
           color: theme.colorScheme.secondaryContainer,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 16, offset: const Offset(0, 6))],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 16, offset: const Offset(0, 6))],
         ),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Padding(
@@ -32,7 +32,7 @@ class FloatingAudioPlayer extends ConsumerWidget {
             child: Row(children: [
               Container(
                 width: 36, height: 36,
-                decoration: BoxDecoration(color: theme.colorScheme.primary.withOpacity(0.2), shape: BoxShape.circle),
+                decoration: BoxDecoration(color: theme.colorScheme.primary.withValues(alpha: 0.2), shape: BoxShape.circle),
                 child: Icon(Icons.music_note_rounded, color: theme.colorScheme.primary, size: 18),
               ),
               const SizedBox(width: 10),

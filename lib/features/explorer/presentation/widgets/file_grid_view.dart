@@ -53,11 +53,11 @@ class FileGridView extends ConsumerWidget {
             duration: const Duration(milliseconds: 180),
             decoration: BoxDecoration(
               color: isSelected
-                  ? theme.colorScheme.primaryContainer.withOpacity(0.4)
+                  ? theme.colorScheme.primaryContainer.withValues(alpha: 0.4)
                   : theme.colorScheme.surfaceContainer,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: isSelected ? theme.colorScheme.primary : theme.colorScheme.outlineVariant.withOpacity(0.3),
+                color: isSelected ? theme.colorScheme.primary : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
                 width: isSelected ? 2 : 1,
               ),
             ),
@@ -68,7 +68,7 @@ class FileGridView extends ConsumerWidget {
                   Container(
                     width: 48, height: 48,
                     decoration: BoxDecoration(
-                      color: isSelected ? theme.colorScheme.primary.withOpacity(0.15) : theme.colorScheme.primaryContainer.withOpacity(0.3),
+                      color: isSelected ? theme.colorScheme.primary.withValues(alpha: 0.15) : theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
                       shape: BoxShape.circle,
                     ),
                     child: isSelected

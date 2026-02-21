@@ -41,7 +41,7 @@ class ActionBottomSheet extends ConsumerWidget {
             child: Row(children: [
               Container(
                 width: 52, height: 52,
-                decoration: BoxDecoration(color: theme.colorScheme.primaryContainer.withOpacity(0.4), borderRadius: BorderRadius.circular(14)),
+                decoration: BoxDecoration(color: theme.colorScheme.primaryContainer.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(14)),
                 child: Icon(node.isFolder ? Icons.folder_rounded : _fileIcon(node.extension), color: theme.colorScheme.primary, size: 28),
               ),
               const SizedBox(width: 14),
@@ -169,8 +169,8 @@ class _ActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = action.isDestructive ? theme.colorScheme.error : theme.colorScheme.onSurface;
     final bg = action.isDestructive
-        ? theme.colorScheme.errorContainer.withOpacity(0.3)
-        : theme.colorScheme.surfaceContainerHighest.withOpacity(0.6);
+        ? theme.colorScheme.errorContainer.withValues(alpha: 0.3)
+        : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6);
     return InkWell(
       onTap: action.onTap,
       borderRadius: BorderRadius.circular(12),

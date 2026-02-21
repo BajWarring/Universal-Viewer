@@ -40,7 +40,11 @@ class AudioNotifier extends Notifier<AudioState> {
   }
 
   void togglePlayPause() {
-    if (_player.playing) _player.pause(); else _player.play();
+    if (_player.playing) {
+      _player.pause();
+    } else {
+      _player.play();
+    }
   }
 
   void seek(Duration position) => _player.seek(position);

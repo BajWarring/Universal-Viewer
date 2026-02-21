@@ -25,16 +25,16 @@ class OmniBottomNav extends StatelessWidget {
       ]),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withOpacity(0.3))),
+          border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3))),
           // PHASE 2: frosted glass effect
-          color: theme.colorScheme.surface.withOpacity(0.95),
+          color: theme.colorScheme.surface.withValues(alpha: 0.95),
         ),
         child: NavigationBar(
           selectedIndex: navigationShell.currentIndex,
           backgroundColor: Colors.transparent,
           elevation: 0,
           // PHASE 2: active pill indicator matching HTML prototype
-          indicatorColor: theme.colorScheme.primary.withOpacity(0.15),
+          indicatorColor: theme.colorScheme.primary.withValues(alpha: 0.15),
           onDestinationSelected: (index) => navigationShell.goBranch(index),
           destinations: [
             NavigationDestination(

@@ -43,33 +43,19 @@ class OmniNode {
 
 class OmniFile extends OmniNode {
   const OmniFile({
-    required String name,
-    required String path,
-    required int size,
-    required DateTime modified,
-    required String extension,
-  }) : super(
-          name: name,
-          path: path,
-          size: size,
-          modified: modified,
-          isFolder: false,
-          extension: extension,
-        );
+    required super.name,
+    required super.path,
+    required super.size,
+    required super.modified,
+    required super.extension,
+  }) : super(isFolder: false);
 }
 
 class OmniFolder extends OmniNode {
   const OmniFolder({
-    required String name,
-    required String path,
-    required DateTime modified,
-    int size = 0,
-  }) : super(
-          name: name,
-          path: path,
-          size: size,
-          modified: modified,
-          isFolder: true,
-          extension: '',
-        );
+    required super.name,
+    required super.path,
+    required super.modified,
+    super.size = 0,
+  }) : super(isFolder: true, extension: '');
 }

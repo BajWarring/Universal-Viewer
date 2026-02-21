@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../filesystem/application/directory_notifier.dart';
-import '../../application/file_operation_notifier.dart';
+import '../application/file_operation_notifier.dart';
 import 'widgets/explorer_header.dart';
 import 'widgets/file_list_view.dart';
 import 'widgets/file_grid_view.dart';
@@ -78,7 +78,7 @@ class ExplorerScreen extends ConsumerWidget {
               child: Stack(alignment: Alignment.center, children: [
                 CircularProgressIndicator(
                   value: used,
-                  backgroundColor: theme.colorScheme.outlineVariant.withOpacity(0.3),
+                  backgroundColor: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
                   color: theme.colorScheme.primary,
                   strokeWidth: 3.5,
                   strokeCap: StrokeCap.round,
@@ -97,7 +97,7 @@ class ExplorerScreen extends ConsumerWidget {
                 child: LinearProgressIndicator(
                   value: used,
                   minHeight: 4,
-                  backgroundColor: theme.colorScheme.outlineVariant.withOpacity(0.3),
+                  backgroundColor: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
                   color: theme.colorScheme.primary,
                 ),
               ),
