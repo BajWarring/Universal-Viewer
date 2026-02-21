@@ -37,6 +37,11 @@ jobs:
       - name: Analyze Project
         run: flutter analyze
 
+        # ☑️ Omni Fie Manager pdfx step only
+      - name: Patch pdfx package for Flutter 3.27
+        run: |
+          find ~/.pub-cache/hosted -path "*/pdfx-2.9.2/android/src/main/kotlin/io/scer/pdfx/Messages.kt" -exec sed -i 's/onSurfaceCleanup/onSurfaceDestroyed/g' {} +
+
       - name: Build APK
         run: flutter build apk --release
 
