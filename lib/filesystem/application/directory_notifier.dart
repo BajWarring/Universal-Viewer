@@ -80,6 +80,11 @@ class DirectoryNotifier extends Notifier<DirectoryState> {
     state = DirectoryState(pathStack: newStack, nodes: const AsyncValue.loading());
     loadDirectory(state.currentPath);
   }
+
+  Future<void> deleteNode(OmniNode node) async {
+    await _localProvider.delete(node.path);
+    loadDirectory(currentPath);
+  }
 }
 
 final directoryProvider = NotifierProvider<DirectoryNotifier, DirectoryState>(() => DirectoryNotifier());
