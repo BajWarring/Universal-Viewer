@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../application/dashboard_notifier.dart';
 import '../../../filesystem/application/directory_notifier.dart';
-import '../../../../filesystem/domain/entities/omni_node.dart';
+import '../../../filesystem/domain/entities/omni_node.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
