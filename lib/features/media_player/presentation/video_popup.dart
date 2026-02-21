@@ -1,39 +1,34 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 import '../../../../filesystem/domain/entities/omni_node.dart';
-import 'video_player_screen.dart';
+import '../application/video_notifier.dart';
+import 'video_fullscreen_viewer.dart';
 
-class VideoPopup extends StatefulWidget {
+class VideoPopup extends ConsumerStatefulWidget {
   final OmniNode node;
   const VideoPopup({super.key, required this.node});
 
   @override
-  State<VideoPopup> createState() => _VideoPopupState();
+  ConsumerState<VideoPopup> createState() => _VideoPopupState();
 }
 
-class _VideoPopupState extends State<VideoPopup> {
-  late VideoPlayerController _controller;
-  bool _isInitialized = false;
-
+class _VideoPopupState extends ConsumerState<VideoPopup> {
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.file(File(widget.node.path))
-      ..initialize().then((_) {
-        setState(() { _isInitialized = true; });
-        _controller.play();
-      });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (ref.read(videoProvider).currentVideo?.path != widget.node.path) {
+        ref.read(videoProvider.notifier).playFile(widget.node);
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final videoState = ref.watch(videoProvider);
+    final ctrl = videoState.controller;
+
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(16),
@@ -46,19 +41,17 @@ class _VideoPopupState extends State<VideoPopup> {
           boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 20)],
         ),
         child: AspectRatio(
-          aspectRatio: _isInitialized ? _controller.value.aspectRatio : 16 / 9,
+          aspectRatio: ctrl != null && ctrl.value.isInitialized ? ctrl.value.aspectRatio : 16 / 9,
           child: Stack(
             children: [
-              if (_isInitialized)
-                VideoPlayer(_controller)
+              if (ctrl != null && ctrl.value.isInitialized)
+                VideoPlayer(ctrl)
               else
                 const Center(child: CircularProgressIndicator(color: Colors.white)),
               
               GestureDetector(
                 onTap: () {
-                  setState(() {
-                    _controller.value.isPlaying ? _controller.pause() : _controller.play();
-                  });
+                  ref.read(videoProvider.notifier).togglePlayPause();
                 },
                 child: Container(
                   color: Colors.black.withValues(alpha: 0.2),
@@ -66,7 +59,7 @@ class _VideoPopupState extends State<VideoPopup> {
                     children: [
                       Center(
                         child: AnimatedOpacity(
-                          opacity: _controller.value.isPlaying ? 0.0 : 1.0,
+                          opacity: videoState.isPlaying ? 0.0 : 1.0,
                           duration: const Duration(milliseconds: 200),
                           child: Container(
                             decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.5), shape: BoxShape.circle),
@@ -80,9 +73,8 @@ class _VideoPopupState extends State<VideoPopup> {
                         child: IconButton(
                           icon: const Icon(Icons.fullscreen_rounded, color: Colors.white, size: 28),
                           onPressed: () {
-                            _controller.pause();
                             Navigator.pop(context); 
-                            Navigator.push(context, MaterialPageRoute(builder: (_) => VideoPlayerScreen(videoNode: widget.node)));
+                            VideoFullscreenViewer.show(context, widget.node);
                           },
                         ),
                       ),
