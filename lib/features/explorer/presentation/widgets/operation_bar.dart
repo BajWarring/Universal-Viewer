@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/file_operation_notifier.dart';
 import '../../../../filesystem/application/directory_notifier.dart';
+import '../../../../shared/widgets/task_progress_dialog.dart';
 
 class OperationBar extends ConsumerWidget {
   const OperationBar({super.key});
@@ -53,50 +54,16 @@ class OperationBar extends ConsumerWidget {
             FilledButton(
               onPressed: () {
                 final destPath = ref.read(directoryProvider).currentPath;
-                _showTaskProgressModal(context, title, opState.clipboard.length.toString());
+                
+                // 1. Show the global progress modal immediately
+                TaskProgressDialog.show(context);
+                
+                // 2. Trigger the isolate-backed Riverpod action
                 ref.read(fileOperationProvider.notifier).executePaste(destPath);
               },
               style: FilledButton.styleFrom(backgroundColor: theme.colorScheme.primary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
               child: Text(actionLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showTaskProgressModal(BuildContext context, String taskName, String items) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        contentPadding: const EdgeInsets.all(24),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('$taskName...', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            Text('$items items selected', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary)),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Processing...', style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-                const Text('0%', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            LinearProgressIndicator(borderRadius: BorderRadius.circular(8), minHeight: 12),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(context), child: const Text('Hide'))),
-                const SizedBox(width: 12),
-                Expanded(child: FilledButton(onPressed: () => Navigator.pop(context), style: FilledButton.styleFrom(backgroundColor: Colors.red), child: const Text('Cancel'))),
-              ],
-            )
           ],
         ),
       ),
