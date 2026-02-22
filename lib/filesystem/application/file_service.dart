@@ -2,14 +2,14 @@ import 'dart:io';
 import 'dart:isolate';
 import 'package:path/path.dart' as p;
 import '../domain/entities/omni_node.dart';
-import '../../features/explorer/application/file_operation_notifier.dart'; // For FileOpType
+import '../../features/explorer/application/file_operation_notifier.dart';
 
 class FileOperationMessage {
   final int currentItem;
   final int totalItems;
   final String currentItemName;
   final double percentage;
-  final UndoAction? undoAction; // Passed back when operation finishes
+  final UndoAction? undoAction; 
 
   FileOperationMessage(this.currentItem, this.totalItems, this.currentItemName, this.percentage, {this.undoAction});
 }
@@ -113,7 +113,6 @@ class FileService {
     final nodes = args[0] as List<OmniNode>;
     final sendPort = args[1] as SendPort;
 
-    // Soft delete: Move to a temp trash cache for undo capability
     final trashDir = Directory(p.join(Directory.systemTemp.path, '.omni_trash'));
     if (!trashDir.existsSync()) trashDir.createSync(recursive: true);
 
@@ -151,17 +150,21 @@ class FileService {
       sendPort.send(FileOperationMessage(i + 1, total, 'Undoing...', (i / total)));
       
       if (action.type == FileOpType.copy) {
-        // Undo Copy -> Delete the pasted files
         final f = File(action.newPaths[i]);
         final d = Directory(action.newPaths[i]);
-        if (f.existsSync()) f.deleteSync();
-        else if (d.existsSync()) d.deleteSync(recursive: true);
+        if (f.existsSync()) {
+          f.deleteSync();
+        } else if (d.existsSync()) {
+          d.deleteSync(recursive: true);
+        }
       } else if (action.type == FileOpType.cut || action.type == FileOpType.delete) {
-        // Undo Move/Delete -> Move files back from target/trash to original location
         final f = File(action.newPaths[i]);
         final d = Directory(action.newPaths[i]);
-        if (f.existsSync()) f.renameSync(action.originalPaths[i]);
-        else if (d.existsSync()) d.renameSync(action.originalPaths[i]);
+        if (f.existsSync()) {
+          f.renameSync(action.originalPaths[i]);
+        } else if (d.existsSync()) {
+          d.renameSync(action.originalPaths[i]);
+        }
       }
     }
     sendPort.send(FileOperationMessage(total, total, 'Restored!', 1.0));
