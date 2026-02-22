@@ -10,6 +10,20 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
+  String _aliasPath(String path) {
+    if (path == '/storage/emulated/0') return 'Internal Storage';
+    if (path.startsWith('/storage/emulated/0/')) return path.replaceFirst('/storage/emulated/0/', 'Internal Storage / ');
+    if (path == '/storage/sdcard1') return 'SD Card';
+    if (path.startsWith('/storage/sdcard1/')) return path.replaceFirst('/storage/sdcard1/', 'SD Card / ');
+    return path;
+  }
+
+  String _aliasFolderName(String name) {
+    if (name == '0') return 'Internal Storage';
+    if (name == 'sdcard1') return 'SD Card';
+    return name;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final opState = ref.watch(fileOperationProvider);
@@ -25,8 +39,9 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
       );
     }
 
-    final currentFolderName = dirState.pathStack.isEmpty ? 'Storage' : dirState.pathStack.last.split('/').last;
-    final currentPath = dirState.currentPath == 'Root' ? 'Select a drive' : dirState.currentPath;
+    final rawFolderName = dirState.pathStack.isEmpty ? 'Storage' : dirState.pathStack.last.split('/').last;
+    final currentFolderName = _aliasFolderName(rawFolderName);
+    final currentPath = dirState.currentPath == 'Root' ? 'Select a drive' : _aliasPath(dirState.currentPath);
 
     return AppBar(
       title: InkWell(
@@ -62,7 +77,7 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
         ),
         IconButton(
           icon: const Icon(Icons.more_vert_rounded),
-          onPressed: () {}, // Implement More popup if needed
+          onPressed: () {}, 
         ),
       ],
     );
@@ -76,10 +91,7 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
       context: context,
       position: RelativeRect.fromLTRB(16, offset.dy + kToolbarHeight + 10, 100, 0),
       color: Theme.of(context).colorScheme.surfaceContainer,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16), 
-        side: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1))
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 8,
       items: <PopupMenuEntry<dynamic>>[
         const PopupMenuItem<String>(
@@ -88,7 +100,7 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
           child: Text('CURRENT PATH', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
         ),
         ...List.generate(dirState.pathStack.length, (index) {
-          final segment = dirState.pathStack[index].split('/').last;
+          final segment = _aliasFolderName(dirState.pathStack[index].split('/').last);
           final isLast = index == dirState.pathStack.length - 1;
           final icon = index == 0 ? (segment.contains('Internal') ? Icons.smartphone_rounded : Icons.sd_card_rounded) : Icons.folder_open_rounded;
           
@@ -97,7 +109,7 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
             height: 40,
             child: Row(
               children: [
-                SizedBox(width: index * 12.0), // Indentation
+                SizedBox(width: index * 12.0),
                 Icon(icon, size: 20, color: isLast ? Theme.of(context).colorScheme.primary : Colors.grey),
                 const SizedBox(width: 12),
                 Text(segment, style: TextStyle(fontSize: 13, fontWeight: isLast ? FontWeight.bold : FontWeight.w500, color: isLast ? Theme.of(context).colorScheme.primary : null)),
@@ -106,11 +118,6 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
           );
         }),
         const PopupMenuDivider(),
-        const PopupMenuItem<String>(
-          enabled: false,
-          height: 30,
-          child: Text('SWITCH DRIVE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
-        ),
         const PopupMenuItem<String>(
           value: '/storage/emulated/0',
           height: 40,
@@ -122,24 +129,10 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
             ],
           ),
         ),
-        const PopupMenuItem<String>(
-          value: '/storage/sdcard1',
-          height: 40,
-          child: Row(
-            children: [
-              Icon(Icons.sd_card_rounded, size: 20, color: Colors.grey),
-              SizedBox(width: 12),
-              Text('SD Card', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-            ],
-          ),
-        ),
       ],
     ).then((value) {
-      if (value is int) {
-        ref.read(directoryProvider.notifier).jumpToIndex(value);
-      } else if (value is String) {
-        ref.read(directoryProvider.notifier).jumpToPath(value);
-      }
+      if (value is int) ref.read(directoryProvider.notifier).jumpToIndex(value);
+      else if (value is String) ref.read(directoryProvider.notifier).jumpToPath(value);
     });
   }
 }
@@ -147,11 +140,9 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
 class _SelectionAppBar extends StatelessWidget implements PreferredSizeWidget {
   final int selectedCount; 
   final VoidCallback onClose, onSelectAll, onDeselectAll, onInvert;
-  
   const _SelectionAppBar({required this.selectedCount, required this.onClose, required this.onSelectAll, required this.onDeselectAll, required this.onInvert});
   
-  @override 
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  @override Size get preferredSize => const Size.fromHeight(kToolbarHeight);
   
   @override 
   Widget build(BuildContext context) {
@@ -164,13 +155,9 @@ class _SelectionAppBar extends StatelessWidget implements PreferredSizeWidget {
         PopupMenuButton<String>(
           icon: const Icon(Icons.checklist_rounded), 
           onSelected: (v) { 
-            if (v == 'all') {
-              onSelectAll(); 
-            } else if (v == 'none') {
-              onDeselectAll(); 
-            } else {
-              onInvert(); 
-            }
+            if (v == 'all') onSelectAll(); 
+            else if (v == 'none') onDeselectAll(); 
+            else onInvert(); 
           }, 
           itemBuilder: (_) => const [
             PopupMenuItem(value: 'all', child: Text('Select All')), 
