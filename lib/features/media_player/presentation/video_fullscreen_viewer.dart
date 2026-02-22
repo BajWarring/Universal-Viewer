@@ -2,8 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:media_kit/media_kit.dart';
-import 'package:media_kit_video/media_kit_video.dart' hide VideoState; // Hides conflict
+import 'package:media_kit_video/media_kit_video.dart' hide VideoState;
 import '../../../../filesystem/domain/entities/omni_node.dart';
 import '../application/video_notifier.dart';
 
@@ -79,7 +78,8 @@ class _VideoFullscreenViewerState extends ConsumerState<VideoFullscreenViewer> {
     if (_showControls) _startHideTimer();
   }
 
-  void _showFeedback(String text, String iconPath) {
+  // Nullable iconPath fixes the argument error
+  void _showFeedback(String text, String? iconPath) {
     setState(() {
       _overlayText = text;
       _overlayIcon = iconPath;
@@ -362,7 +362,7 @@ class _VideoFullscreenViewerState extends ConsumerState<VideoFullscreenViewer> {
             const Padding(padding: EdgeInsets.all(16), child: Text("Audio Tracks", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
             ...state.audioTracks.map((t) => ListTile(
               leading: Icon(state.selectedAudioTrack == t ? Icons.radio_button_checked : Icons.radio_button_off, color: state.selectedAudioTrack == t ? Theme.of(context).colorScheme.primary : Colors.grey),
-              title: Text(t.title ?? t.language ?? t.id ?? 'Unknown Track'),
+              title: Text(t.title ?? t.language ?? t.id), // Fixed null-aware dead code
               onTap: () { ref.read(videoProvider.notifier).setAudioTrack(t); Navigator.pop(context); },
             ))
           ],
@@ -383,7 +383,7 @@ class _VideoFullscreenViewerState extends ConsumerState<VideoFullscreenViewer> {
             const Padding(padding: EdgeInsets.all(16), child: Text("Subtitles", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
             ...state.subtitleTracks.map((t) => ListTile(
               leading: Icon(state.selectedSubtitleTrack == t ? Icons.radio_button_checked : Icons.radio_button_off, color: state.selectedSubtitleTrack == t ? Theme.of(context).colorScheme.primary : Colors.grey),
-              title: Text(t.title ?? t.language ?? t.id ?? 'Unknown Track'),
+              title: Text(t.title ?? t.language ?? t.id), // Fixed null-aware dead code
               onTap: () { ref.read(videoProvider.notifier).setSubtitleTrack(t); Navigator.pop(context); },
             ))
           ],
