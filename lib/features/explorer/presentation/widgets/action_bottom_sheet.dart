@@ -7,7 +7,7 @@ import 'rename_dialog.dart';
 import '../../../archive_engine/presentation/widgets/compress_dialog.dart';
 import '../../../preview_engine/presentation/preview_screen.dart';
 import '../../../../filesystem/application/directory_notifier.dart';
-import 'task_progress_dialog.dart';
+import '../../../../shared/widgets/task_progress_dialog.dart';
 
 class ActionBottomSheet extends ConsumerWidget {
   final OmniNode node;
