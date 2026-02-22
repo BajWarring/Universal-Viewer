@@ -131,8 +131,11 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
         ),
       ],
     ).then((value) {
-      if (value is int) ref.read(directoryProvider.notifier).jumpToIndex(value);
-      else if (value is String) ref.read(directoryProvider.notifier).jumpToPath(value);
+      if (value is int) {
+        ref.read(directoryProvider.notifier).jumpToIndex(value);
+      } else if (value is String) {
+        ref.read(directoryProvider.notifier).jumpToPath(value);
+      }
     });
   }
 }
@@ -155,9 +158,13 @@ class _SelectionAppBar extends StatelessWidget implements PreferredSizeWidget {
         PopupMenuButton<String>(
           icon: const Icon(Icons.checklist_rounded), 
           onSelected: (v) { 
-            if (v == 'all') onSelectAll(); 
-            else if (v == 'none') onDeselectAll(); 
-            else onInvert(); 
+            if (v == 'all') {
+              onSelectAll(); 
+            } else if (v == 'none') {
+              onDeselectAll(); 
+            } else {
+              onInvert(); 
+            }
           }, 
           itemBuilder: (_) => const [
             PopupMenuItem(value: 'all', child: Text('Select All')), 
