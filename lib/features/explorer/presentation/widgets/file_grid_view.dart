@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../filesystem/domain/entities/omni_node.dart';
 import '../../../../filesystem/application/directory_notifier.dart';
+import '../../../../filesystem/application/storage_service.dart';
 import '../../application/file_operation_notifier.dart';
 import '../../../preview_engine/presentation/preview_screen.dart';
 import 'action_bottom_sheet.dart';
@@ -17,22 +18,11 @@ class FileGridView extends ConsumerWidget {
     final theme = Theme.of(context);
     final sorted = ref.read(fileOperationProvider.notifier).sortedNodes(nodes);
 
-    if (sorted.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center, 
-          children: [
-            Icon(Icons.folder_open_rounded, size: 64, color: theme.colorScheme.outlineVariant), 
-            const SizedBox(height: 16), 
-            Text('This folder is empty', style: TextStyle(color: theme.colorScheme.outline))
-          ]
-        )
-      );
-    }
+    if (sorted.isEmpty) return _buildEmptyState(theme);
 
     return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 0.82),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, mainAxisSpacing: 16, crossAxisSpacing: 16, childAspectRatio: 0.85),
       itemCount: sorted.length,
       itemBuilder: (context, index) {
         final node = sorted[index];
@@ -44,57 +34,53 @@ class FileGridView extends ConsumerWidget {
             ref.read(fileOperationProvider.notifier).toggleSelection(node); 
           },
           onTap: () {
-            if (opState.isSelectionMode) {
-              ref.read(fileOperationProvider.notifier).toggleSelection(node);
-            } else if (node.isFolder) {
-              ref.read(directoryProvider.notifier).navigateTo(node.name);
-            } else {
-              UnifiedViewer.show(context, node);
-            }
+            if (opState.isSelectionMode) ref.read(fileOperationProvider.notifier).toggleSelection(node);
+            else if (node.isFolder) ref.read(directoryProvider.notifier).navigateTo(node.name);
+            else UnifiedViewer.show(context, node);
           },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
             decoration: BoxDecoration(
-              color: isSelected ? theme.colorScheme.primaryContainer.withValues(alpha: 0.4) : theme.colorScheme.surfaceContainer, 
+              color: isSelected ? theme.colorScheme.primaryContainer.withValues(alpha: 0.4) : Colors.transparent, 
               borderRadius: BorderRadius.circular(16), 
-              border: Border.all(color: isSelected ? theme.colorScheme.primary : theme.colorScheme.outlineVariant.withValues(alpha: 0.3), width: isSelected ? 2 : 1)
+              border: Border.all(color: isSelected ? theme.colorScheme.primary : Colors.transparent, width: isSelected ? 2 : 0)
             ),
             child: Stack(
               children: [
                 Padding(
-                  padding: const EdgeInsets.all(12), 
+                  padding: const EdgeInsets.all(8), 
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center, 
                     children: [
                       Container(
-                        width: 52, height: 52, 
-                        decoration: BoxDecoration(color: isSelected ? theme.colorScheme.primary.withValues(alpha: 0.15) : theme.colorScheme.primaryContainer.withValues(alpha: 0.3), shape: BoxShape.circle), 
-                        child: isSelected ? Icon(Icons.check_rounded, color: theme.colorScheme.primary, size: 26) : Icon(node.isFolder ? Icons.folder_rounded : _fileIcon(node.extension), color: node.isFolder ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant, size: 28)
+                        width: 56, height: 56, 
+                        decoration: BoxDecoration(color: isSelected ? theme.colorScheme.primary.withValues(alpha: 0.15) : theme.colorScheme.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)), 
+                        child: isSelected ? Icon(Icons.check_rounded, color: theme.colorScheme.primary, size: 28) : Icon(node.isFolder ? Icons.folder_rounded : _fileIcon(node.extension), color: theme.colorScheme.primary, size: 32)
                       ),
-                      const SizedBox(height: 10),
-                      Text(node.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
+                      const SizedBox(height: 12),
+                      Text(node.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
                       const SizedBox(height: 4),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center, 
-                        children: [
-                          Text(node.isFolder ? '${node.name} items' : _formatBytes(node.size), style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant)), 
-                          const SizedBox(width: 8), 
-                          Text(_formatDate(node.modified), style: const TextStyle(fontSize: 10, color: Colors.grey))
-                        ]
-                      ),
+                      Text(node.isFolder ? '${node.itemCount} items' : StorageService.formatBytes(node.size), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant)),
                     ]
                   )
                 ),
                 if (!opState.isSelectionMode) 
-                  Positioned(
-                    top: 4, right: 4, 
-                    child: IconButton(iconSize: 18, icon: const Icon(Icons.more_vert_rounded), onPressed: () => ActionBottomSheet.show(context, node))
-                  ),
+                  Positioned(top: 0, right: 0, child: IconButton(iconSize: 18, icon: const Icon(Icons.more_vert_rounded), onPressed: () => ActionBottomSheet.show(context, node))),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildEmptyState(ThemeData theme) {
+    return Center(
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(Icons.folder_open_rounded, size: 64, color: theme.colorScheme.outlineVariant), 
+        const SizedBox(height: 16), 
+        Text('This folder is empty', style: TextStyle(color: theme.colorScheme.outline))
+      ])
     );
   }
 
@@ -107,15 +93,5 @@ class FileGridView extends ConsumerWidget {
       case 'zip': case 'rar': case '7z': return Icons.folder_zip_rounded;
       default: return Icons.insert_drive_file_rounded;
     }
-  }
-
-  String _formatBytes(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 }
