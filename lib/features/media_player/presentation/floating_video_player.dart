@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:video_player/video_player.dart';
+import 'package:media_kit_video/media_kit_video.dart' hide VideoState;
 import '../application/video_notifier.dart';
 import 'video_fullscreen_viewer.dart';
 
@@ -16,6 +16,9 @@ class FloatingVideoPlayer extends ConsumerWidget {
     final progress = videoState.duration.inMilliseconds > 0
         ? videoState.position.inMilliseconds / videoState.duration.inMilliseconds
         : 0.0;
+        
+    final width = videoState.player?.state.width?.toDouble() ?? 16.0;
+    final height = videoState.player?.state.height?.toDouble() ?? 9.0;
 
     return Dismissible(
       key: const Key('mini_video_player'),
@@ -34,7 +37,6 @@ class FloatingVideoPlayer extends ConsumerWidget {
           ),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Row(children: [
-              // Live Mini Video Feed (YouTube Style)
               Container(
                 width: 90,
                 height: 48,
@@ -44,13 +46,13 @@ class FloatingVideoPlayer extends ConsumerWidget {
                   color: Colors.black,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: videoState.controller!.value.isInitialized 
+                child: videoState.player != null 
                     ? FittedBox(
                         fit: BoxFit.cover, 
                         child: SizedBox(
-                          width: videoState.controller!.value.size.width,
-                          height: videoState.controller!.value.size.height,
-                          child: VideoPlayer(videoState.controller!),
+                          width: width,
+                          height: height,
+                          child: Video(controller: videoState.controller!, controls: NoVideoControls),
                         ),
                       )
                     : const Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))),
