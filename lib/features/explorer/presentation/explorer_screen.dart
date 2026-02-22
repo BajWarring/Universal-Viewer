@@ -6,6 +6,7 @@ import 'widgets/explorer_header.dart';
 import 'widgets/file_list_view.dart';
 import 'widgets/file_grid_view.dart';
 import 'widgets/dynamic_fab.dart';
+import 'widgets/operation_bar.dart';
 
 class ExplorerScreen extends ConsumerWidget {
   const ExplorerScreen({super.key});
@@ -16,37 +17,60 @@ class ExplorerScreen extends ConsumerWidget {
     final opState = ref.watch(fileOperationProvider);
     final theme = Theme.of(context);
 
+    // Listen to operation completions to trigger the Undo Snackbar
+    ref.listen<FileOperationState>(fileOperationProvider, (previous, next) {
+      if (previous?.taskStatus == TaskStatus.running && next.taskStatus == TaskStatus.success) {
+        if (next.operation != FileOpType.none && next.operation != FileOpType.undo) {
+          final messenger = ScaffoldMessenger.of(context);
+          messenger.hideCurrentSnackBar();
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text('${next.operation.name.toUpperCase()} Completed!'),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              action: next.lastUndoableAction != null 
+                  ? SnackBarAction(
+                      label: 'UNDO', 
+                      textColor: theme.colorScheme.inversePrimary,
+                      onPressed: () => ref.read(fileOperationProvider.notifier).undoLastAction()
+                    )
+                  : null,
+            ),
+          );
+        }
+      }
+    });
+
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
-      // PHASE 1 FIX: ExplorerHeader goes in appBar, not inside Column
       appBar: const ExplorerHeader(),
-      body: dirState.nodes.when(
-        data: (nodes) {
-          if (dirState.pathStack.isEmpty) {
-            return _buildRootSelector(context, ref, theme);
-          }
-          // PHASE 3: toggle between list and grid
-          if (opState.isGridView) {
-            return FileGridView(nodes: nodes);
-          }
-          return FileListView(nodes: nodes);
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              const Icon(Icons.error_outline_rounded, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
-              Text('Error loading files:\n$err', textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () => ref.read(directoryProvider.notifier).loadDirectory(dirState.currentPath),
-                child: const Text('Retry'),
+      body: Stack(
+        children: [
+          dirState.nodes.when(
+            data: (nodes) {
+              if (dirState.pathStack.isEmpty) return _buildRootSelector(context, ref, theme);
+              if (opState.isGridView) return FileGridView(nodes: nodes);
+              return FileListView(nodes: nodes);
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, _) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  const Icon(Icons.error_outline_rounded, size: 48, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text('Error loading files:\n$err', textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: () => ref.read(directoryProvider.notifier).loadDirectory(dirState.currentPath),
+                    child: const Text('Retry'),
+                  ),
+                ]),
               ),
-            ]),
+            ),
           ),
-        ),
+          const OperationBar(), // Mounts bottom operations (Copy/Cut)
+        ],
       ),
       floatingActionButton: const DynamicFab(),
     );
