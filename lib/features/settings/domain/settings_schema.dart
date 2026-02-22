@@ -35,6 +35,10 @@ final List<SettingsCategory> appSettingsSchema = [
     SettingItem(type: SettingType.toggle, id: 'showFileSize', label: 'Show file size'),
     SettingItem(type: SettingType.toggle, id: 'showDateModified', label: 'Show date modified'),
   ]),
+  // NEW: Media Player Settings Category
+  const SettingsCategory(id: 'media', title: 'Media Player', desc: 'Audio and Video behavior', icon: Icons.play_circle_outline_rounded, items: [
+    SettingItem(type: SettingType.dropdown, id: 'mediaUiMode', label: 'Media UI Mode', options: ["popup_mode", "floating_menu_mode"]),
+  ]),
   const SettingsCategory(id: 'safety', title: 'Safety & Confirmations', desc: 'Deletion and warnings', icon: Icons.security_outlined, items: [
     SettingItem(type: SettingType.toggle, id: 'confirmDelete', label: 'Confirm before delete'),
     SettingItem(type: SettingType.slider, id: 'largeFileThreshold', label: 'Large file threshold (MB)', min: 10, max: 2000),
