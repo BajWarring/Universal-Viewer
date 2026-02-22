@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../filesystem/domain/entities/omni_node.dart';
+import '../../../../core/settings/settings_notifier.dart';
 import 'renderers/text_previewer.dart';
 import 'renderers/image_previewer.dart';
 import '../../media_player/presentation/audio_popup.dart';
 import '../../media_player/presentation/video_popup.dart';
+import '../../media_player/application/audio_notifier.dart';
+import '../../media_player/application/video_notifier.dart';
 
-class UnifiedViewer extends StatelessWidget {
+class UnifiedViewer extends ConsumerWidget {
   final OmniNode node;
   const UnifiedViewer({super.key, required this.node});
 
@@ -14,17 +18,29 @@ class UnifiedViewer extends StatelessWidget {
     final isAudio = ['mp3', 'wav', 'ogg', 'm4a', 'flac'].contains(ext);
     final isVideo = ['mp4', 'mkv', 'avi', 'webm', 'mov'].contains(ext);
 
-    // 1. Show Mini Media Popups (Now imported cleanly from media_player feature)
+    // Read Settings to determine UI behavior
+    final container = ProviderScope.containerOf(context);
+    final mode = container.read(settingsProvider).mediaUiMode;
+
     if (isAudio) {
-      showDialog(context: context, barrierColor: Colors.black54, builder: (_) => AudioPopup(node: node));
+      if (mode == MediaUiMode.popup) {
+        showDialog(context: context, barrierColor: Colors.black54, builder: (_) => AudioPopup(node: node));
+      } else {
+        container.read(audioProvider.notifier).playFile(node);
+      }
       return;
     }
+    
     if (isVideo) {
-      showDialog(context: context, barrierColor: Colors.black87, builder: (_) => VideoPopup(node: node));
+      if (mode == MediaUiMode.popup) {
+        showDialog(context: context, barrierColor: Colors.black87, builder: (_) => VideoPopup(node: node));
+      } else {
+        container.read(videoProvider.notifier).playFile(node);
+      }
       return;
     }
 
-    // 2. Show Default Fullscreen Viewer (Images, Text, etc)
+    // Default Fullscreen Viewer (Images, Text, etc)
     showGeneralDialog(
       context: context,
       barrierColor: Theme.of(context).scaffoldBackgroundColor,
@@ -38,7 +54,7 @@ class UnifiedViewer extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     
     return Material(
@@ -70,13 +86,8 @@ class UnifiedViewer extends StatelessWidget {
   Widget _buildPreviewer(BuildContext context) {
     final ext = node.extension.toLowerCase();
     
-    if (['jpeg', 'jpg', 'png', 'gif', 'webp'].contains(ext)) {
-      return ImagePreviewer(path: node.path);
-    }
-    
-    if (['txt', 'md', 'json', 'xml', 'java', 'kt', 'gradle', 'kts', 'html', 'sql', 'csv', 'py', 'dart', 'db'].contains(ext)) {
-      return TextPreviewer(path: node.path, extension: ext);
-    }
+    if (['jpeg', 'jpg', 'png', 'gif', 'webp'].contains(ext)) return ImagePreviewer(path: node.path);
+    if (['txt', 'md', 'json', 'xml', 'java', 'kt', 'gradle', 'kts', 'html', 'sql', 'csv', 'py', 'dart', 'db'].contains(ext)) return TextPreviewer(path: node.path, extension: ext);
     
     return Center(
       child: Column(
