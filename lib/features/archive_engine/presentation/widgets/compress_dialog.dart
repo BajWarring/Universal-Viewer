@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../filesystem/domain/entities/omni_node.dart';
 import '../../application/archive_service.dart';
+import '../../../explorer/application/file_operation_notifier.dart';
+import '../../../explorer/presentation/widgets/task_progress_dialog.dart';
 
 class CompressDialog extends ConsumerStatefulWidget {
   final OmniNode sourceNode;
@@ -22,8 +24,6 @@ class _CompressDialogState extends ConsumerState<CompressDialog> {
   String _selectedEncryption = 'None';
   bool _deleteSource = false;
   bool _isObscured = true;
-  bool _isProcessing = false;
-  final _archiveService = ArchiveService();
 
   @override
   void initState() {
@@ -40,8 +40,7 @@ class _CompressDialogState extends ConsumerState<CompressDialog> {
     super.dispose();
   }
 
-    Future<void> _startCompression() async {
-    setState(() => _isProcessing = true);
+  void _startCompression() {
     final destPath = '${widget.sourceNode.path}_compressed$_selectedFormat';
     final params = CompressParams(
       sourcePath: widget.sourceNode.path,
@@ -50,28 +49,11 @@ class _CompressDialogState extends ConsumerState<CompressDialog> {
       password: _passwordController.text.isEmpty ? null : _passwordController.text,
     );
     
-    try {
-      await _archiveService.compressDirectory(params);
-      
-      if (_deleteSource) {
-        // TODO: Implement source deletion if checked
-      }
-      
-      // Early return to completely satisfy the async gap linter
-      if (!mounted) return; 
-      
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Archive Created!')));
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-    } finally {
-      if (mounted) {
-        setState(() => _isProcessing = false);
-      }
-    }
+    Navigator.pop(context); 
+    TaskProgressDialog.show(context); 
+    
+    ref.read(fileOperationProvider.notifier).executeCompress(params);
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -163,9 +145,9 @@ class _CompressDialogState extends ConsumerState<CompressDialog> {
             ),
             const SizedBox(height: 16),
             FilledButton(
-              onPressed: _isProcessing ? null : _startCompression,
+              onPressed: _startCompression,
               style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-              child: _isProcessing ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Create Archive', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text('Create Archive', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         ),
