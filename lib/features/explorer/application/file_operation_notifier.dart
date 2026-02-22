@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../filesystem/domain/entities/omni_node.dart';
 import '../../../../filesystem/application/file_service.dart';
 import '../../../../filesystem/application/directory_notifier.dart';
+import '../../archive_engine/application/archive_service.dart';
 
 enum FileOpType { none, copy, cut, extract, compress, delete, undo }
 enum SortBy { name, size, date, type }
@@ -63,7 +64,6 @@ class FileOperationState {
       taskProgress: taskProgress ?? this.taskProgress,
       currentTaskItem: currentTaskItem ?? this.currentTaskItem,
       errorMessage: errorMessage ?? this.errorMessage,
-      // Pass null explicitly to clear the undo history, otherwise retain
       lastUndoableAction: lastUndoableAction ?? this.lastUndoableAction,
     );
   }
@@ -87,9 +87,11 @@ class FileOperationNotifier extends Notifier<FileOperationState> {
   }
   void clearSelection() => state = state.copyWith(selectedNodes: {});
 
-  void setOperation(FileOpType type) {
-    if (state.selectedNodes.isEmpty && type != FileOpType.none) return;
-    state = state.copyWith(clipboard: state.selectedNodes.toList(), operation: type, selectedNodes: {});
+  // Updated to accept explicit nodes so single-item taps in the bottom sheet trigger the Operation Bar
+  void setOperation(FileOpType type, {List<OmniNode>? explicitNodes}) {
+    final nodes = explicitNodes ?? state.selectedNodes.toList();
+    if (nodes.isEmpty && type != FileOpType.none) return;
+    state = state.copyWith(clipboard: nodes, operation: type, selectedNodes: {});
   }
 
   void clearClipboard() => state = state.copyWith(clipboard: [], operation: FileOpType.none);
@@ -111,9 +113,21 @@ class FileOperationNotifier extends Notifier<FileOperationState> {
         await FileService.copyNodes(nodesToProcess, destinationPath, _updateProgress);
       } else if (opType == FileOpType.cut) {
         await FileService.moveNodes(nodesToProcess, destinationPath, _updateProgress);
+      } else if (opType == FileOpType.extract) {
+        await ArchiveService.extract(nodesToProcess.first.path, destinationPath, _updateProgress);
       }
       
       ref.read(directoryProvider.notifier).loadDirectory(destinationPath);
+    } catch (e) {
+      state = state.copyWith(taskStatus: TaskStatus.error, errorMessage: e.toString());
+    }
+  }
+
+  Future<void> executeCompress(CompressParams params) async {
+    state = state.copyWith(taskStatus: TaskStatus.running, operation: FileOpType.compress, taskProgress: 0.0, lastUndoableAction: null);
+    try {
+      await ArchiveService.compressDirectory(params, _updateProgress);
+      ref.read(directoryProvider.notifier).loadDirectory(ref.read(directoryProvider).currentPath);
     } catch (e) {
       state = state.copyWith(taskStatus: TaskStatus.error, errorMessage: e.toString());
     }
@@ -137,7 +151,6 @@ class FileOperationNotifier extends Notifier<FileOperationState> {
     state = state.copyWith(taskStatus: TaskStatus.running, operation: FileOpType.undo, taskProgress: 0.0, lastUndoableAction: null);
     try {
       await FileService.undoTask(action, _updateProgress);
-      state = state.copyWith(taskStatus: TaskStatus.success, taskProgress: 1.0);
       ref.read(directoryProvider.notifier).loadDirectory(ref.read(directoryProvider).currentPath);
     } catch (e) {
       state = state.copyWith(taskStatus: TaskStatus.error, errorMessage: e.toString());
