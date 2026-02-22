@@ -150,6 +150,7 @@ class ActionBottomSheet extends ConsumerWidget {
           _SheetAction('Extract To...', Icons.drive_file_move_rounded, () { 
             ref.read(fileOperationProvider.notifier).setOperation(FileOpType.extract, explicitNodes: [node]);
             Navigator.pop(context); 
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Navigate to destination and tap Extract Here on the bottom bar')));
           }),
         ],
         _SheetAction('Compress', Icons.folder_zip_rounded, () { Navigator.pop(context); CompressDialog.show(context, node); }),
@@ -163,7 +164,7 @@ class ActionBottomSheet extends ConsumerWidget {
     } else {
       return [
         _SheetAction('Open', Icons.open_in_new_rounded, () { Navigator.pop(context); _openNode(context, ref); }),
-        _SheetAction('Open with', Icons.apps_rounded, () { Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Opening with system apps...'))); }),
+        _SheetAction('Open with...', Icons.apps_rounded, () { Navigator.pop(context); Share.shareXFiles([XFile(node.path)]); }),
         _SheetAction('Compress', Icons.folder_zip_rounded, () { Navigator.pop(context); CompressDialog.show(context, node); }),
         _SheetAction('Copy', Icons.copy_rounded, () { ref.read(fileOperationProvider.notifier).setOperation(FileOpType.copy, explicitNodes: [node]); Navigator.pop(context); }),
         _SheetAction('Cut', Icons.content_cut_rounded, () { ref.read(fileOperationProvider.notifier).setOperation(FileOpType.cut, explicitNodes: [node]); Navigator.pop(context); }),
