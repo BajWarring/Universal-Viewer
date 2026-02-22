@@ -16,13 +16,13 @@ class VideoState {
   // Advanced State
   final bool isLocked;
   final double playbackSpeed;
-  final bool isSpeedBoosted; // For Reddit-style long press 2x speed
+  final bool isSpeedBoosted; 
   
-  // Tracks
-  final Track? selectedAudioTrack;
-  final Track? selectedSubtitleTrack;
-  final List<Track> audioTracks;
-  final List<Track> subtitleTracks;
+  // Tracks (Correctly strongly typed for media_kit)
+  final AudioTrack? selectedAudioTrack;
+  final SubtitleTrack? selectedSubtitleTrack;
+  final List<AudioTrack> audioTracks;
+  final List<SubtitleTrack> subtitleTracks;
 
   const VideoState({
     this.currentVideo,
@@ -52,10 +52,10 @@ class VideoState {
     bool? isLocked,
     double? playbackSpeed,
     bool? isSpeedBoosted,
-    Track? selectedAudioTrack,
-    Track? selectedSubtitleTrack,
-    List<Track>? audioTracks,
-    List<Track>? subtitleTracks,
+    AudioTrack? selectedAudioTrack,
+    SubtitleTrack? selectedSubtitleTrack,
+    List<AudioTrack>? audioTracks,
+    List<SubtitleTrack>? subtitleTracks,
   }) {
     return VideoState(
       currentVideo: currentVideo ?? this.currentVideo,
@@ -103,11 +103,10 @@ class VideoNotifier extends Notifier<VideoState> {
 
     _disposePlayer();
 
-    // Initialize MPV Player with Hardware Acceleration
     final player = Player(configuration: const PlayerConfiguration(
       pitch: false, 
       title: 'Omni Media Engine',
-      bufferSize: 32 * 1024 * 1024, // 32MB buffer
+      bufferSize: 32 * 1024 * 1024,
     ));
     final controller = VideoController(player);
 
@@ -120,7 +119,6 @@ class VideoNotifier extends Notifier<VideoState> {
       isSpeedBoosted: false,
     );
     
-    // Listen to MPV Streams
     _subscriptions.addAll([
       player.stream.playing.listen((playing) => state = state.copyWith(isPlaying: playing)),
       player.stream.position.listen((pos) => state = state.copyWith(position: pos)),
@@ -144,14 +142,8 @@ class VideoNotifier extends Notifier<VideoState> {
     player.play();
   }
 
-  void togglePlayPause() {
-    state.player?.playOrPause();
-  }
-
-  void seek(Duration position) {
-    state.player?.seek(position);
-  }
-
+  void togglePlayPause() => state.player?.playOrPause();
+  void seek(Duration position) => state.player?.seek(position);
   void seekRelative(Duration delta) {
     final current = state.player?.state.position ?? Duration.zero;
     state.player?.seek(current + delta);
@@ -172,21 +164,11 @@ class VideoNotifier extends Notifier<VideoState> {
     }
   }
 
-  void toggleLock() {
-    state = state.copyWith(isLocked: !state.isLocked);
-  }
-
-  void setVolume(double volume) {
-    state.player?.setVolume(volume * 100);
-  }
-
-  void setAudioTrack(Track track) {
-    state.player?.setAudioTrack(track);
-  }
-
-  void setSubtitleTrack(Track track) {
-    state.player?.setSubtitleTrack(track);
-  }
+  void toggleLock() => state = state.copyWith(isLocked: !state.isLocked);
+  void setVolume(double volume) => state.player?.setVolume(volume * 100);
+  
+  void setAudioTrack(AudioTrack track) => state.player?.setAudioTrack(track);
+  void setSubtitleTrack(SubtitleTrack track) => state.player?.setSubtitleTrack(track);
 
   void stopAndDismiss() {
     _disposePlayer();
