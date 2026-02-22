@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:video_player/video_player.dart';
+import 'package:media_kit_video/media_kit_video.dart' hide VideoState;
 import '../../../../filesystem/domain/entities/omni_node.dart';
 import '../application/video_notifier.dart';
 import 'video_fullscreen_viewer.dart';
@@ -29,6 +29,10 @@ class _VideoPopupState extends ConsumerState<VideoPopup> {
     final videoState = ref.watch(videoProvider);
     final ctrl = videoState.controller;
 
+    final width = videoState.player?.state.width?.toDouble() ?? 16.0;
+    final height = videoState.player?.state.height?.toDouble() ?? 9.0;
+    final aspectRatio = (width > 0 && height > 0) ? (width / height) : (16 / 9);
+
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(16),
@@ -41,11 +45,11 @@ class _VideoPopupState extends ConsumerState<VideoPopup> {
           boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 20)],
         ),
         child: AspectRatio(
-          aspectRatio: ctrl != null && ctrl.value.isInitialized ? ctrl.value.aspectRatio : 16 / 9,
+          aspectRatio: aspectRatio,
           child: Stack(
             children: [
-              if (ctrl != null && ctrl.value.isInitialized)
-                VideoPlayer(ctrl)
+              if (ctrl != null)
+                Video(controller: ctrl, controls: NoVideoControls)
               else
                 const Center(child: CircularProgressIndicator(color: Colors.white)),
               
