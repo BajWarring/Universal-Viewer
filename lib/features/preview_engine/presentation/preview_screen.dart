@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:pdfx/pdfx.dart';
 import '../../../../filesystem/domain/entities/omni_node.dart';
-import '../../../../core/settings/settings_notifier.dart';
+import '../../settings/application/settings_notifier.dart'; // Fixed Import Path
 import 'renderers/text_previewer.dart';
 import 'renderers/image_previewer.dart';
 import '../../media_player/presentation/audio_popup.dart';
@@ -18,12 +21,12 @@ class UnifiedViewer extends ConsumerWidget {
     final isAudio = ['mp3', 'wav', 'ogg', 'm4a', 'flac'].contains(ext);
     final isVideo = ['mp4', 'mkv', 'avi', 'webm', 'mov'].contains(ext);
 
-    // Read Settings to determine UI behavior
+    // Read Settings to determine UI behavior from the map
     final container = ProviderScope.containerOf(context);
-    final mode = container.read(settingsProvider).mediaUiMode;
+    final mode = container.read(settingsProvider).get('mediaUiMode');
 
     if (isAudio) {
-      if (mode == MediaUiMode.popup) {
+      if (mode == 'popup_mode') {
         showDialog(context: context, barrierColor: Colors.black54, builder: (_) => AudioPopup(node: node));
       } else {
         container.read(audioProvider.notifier).playFile(node);
@@ -32,7 +35,7 @@ class UnifiedViewer extends ConsumerWidget {
     }
     
     if (isVideo) {
-      if (mode == MediaUiMode.popup) {
+      if (mode == 'popup_mode') {
         showDialog(context: context, barrierColor: Colors.black87, builder: (_) => VideoPopup(node: node));
       } else {
         container.read(videoProvider.notifier).playFile(node);
@@ -48,7 +51,13 @@ class UnifiedViewer extends ConsumerWidget {
       transitionDuration: const Duration(milliseconds: 250),
       pageBuilder: (context, animation, secondaryAnimation) => UnifiedViewer(node: node),
       transitionBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(opacity: animation, child: ScaleTransition(scale: Tween<double>(begin: 0.98, end: 1.0).animate(animation), child: child));
+        return FadeTransition(
+          opacity: animation, 
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.98, end: 1.0).animate(animation), 
+            child: child
+          )
+        );
       },
     );
   }
@@ -86,8 +95,18 @@ class UnifiedViewer extends ConsumerWidget {
   Widget _buildPreviewer(BuildContext context) {
     final ext = node.extension.toLowerCase();
     
+    if (['txt', 'md', 'json', 'xml', 'gradle', 'kts', 'java', 'kt', 'html', 'sql', 'csv', 'py', 'dart', 'db'].contains(ext)) {
+      return TextPreviewer(path: node.path, extension: ext);
+    }
+    if (ext == 'svg') return Center(child: SvgPicture.file(File(node.path)));
     if (['jpeg', 'jpg', 'png', 'gif', 'webp'].contains(ext)) return ImagePreviewer(path: node.path);
-    if (['txt', 'md', 'json', 'xml', 'java', 'kt', 'gradle', 'kts', 'html', 'sql', 'csv', 'py', 'dart', 'db'].contains(ext)) return TextPreviewer(path: node.path, extension: ext);
+    if (ext == 'pdf') {
+      return PdfView(
+        controller: PdfController(
+          document: PdfDocument.openFile(node.path),
+        ),
+      );
+    }
     
     return Center(
       child: Column(
