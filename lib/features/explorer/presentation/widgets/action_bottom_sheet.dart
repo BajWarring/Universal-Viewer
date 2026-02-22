@@ -178,6 +178,58 @@ class _ActionTile extends StatelessWidget {
   final _SheetAction action;
   final ThemeData theme;
   const _ActionTile({required this.action, required this.theme});
+
+
+  
+  List<_SheetAction> _buildActions(BuildContext context, WidgetRef ref) {
+    final isArchive = ['zip','rar','7z','tar','apk'].contains(node.extension.toLowerCase());
+    if (node.isFolder || isArchive) {
+      return [
+        _SheetAction('Open', Icons.folder_open_rounded, () { Navigator.pop(context); _openNode(context, ref); }),
+        if (isArchive) ...[
+          // Extracts in the current folder immediately
+          _SheetAction('Extract Here', Icons.unarchive_rounded, () { 
+            Navigator.pop(context); 
+            ref.read(fileOperationProvider.notifier).setOperation(FileOpType.extract, explicitNodes: [node]);
+            ref.read(fileOperationProvider.notifier).executePaste(ref.read(directoryProvider).currentPath);
+            TaskProgressDialog.show(context);
+          }),
+          // Pops up the OperationBar allowing user to navigate to another folder and hit Paste/Extract
+          _SheetAction('Extract To...', Icons.drive_file_move_rounded, () { 
+            ref.read(fileOperationProvider.notifier).setOperation(FileOpType.extract, explicitNodes: [node]);
+            Navigator.pop(context); 
+          }),
+        ],
+        _SheetAction('Compress', Icons.folder_zip_rounded, () { Navigator.pop(context); CompressDialog.show(context, node); }),
+        
+        // Explicitly pass [node] so single items trigger the bottom Operation Bar
+        _SheetAction('Copy', Icons.copy_rounded, () { ref.read(fileOperationProvider.notifier).setOperation(FileOpType.copy, explicitNodes: [node]); Navigator.pop(context); }),
+        _SheetAction('Cut', Icons.content_cut_rounded, () { ref.read(fileOperationProvider.notifier).setOperation(FileOpType.cut, explicitNodes: [node]); Navigator.pop(context); }),
+        
+        _SheetAction('Rename', Icons.drive_file_rename_outline_rounded, () { Navigator.pop(context); _showRename(context); }),
+        _SheetAction('Delete', Icons.delete_outline_rounded, () { Navigator.pop(context); _showDeleteConfirm(context, ref); }, isDestructive: true),
+        _SheetAction('Details', Icons.info_outline_rounded, () { Navigator.pop(context); _showDetails(context); }),
+        if (!node.isFolder) _SheetAction('Share', Icons.share_rounded, () { Navigator.pop(context); Share.shareXFiles([XFile(node.path)]); }),
+      ];
+    } else {
+      return [
+        _SheetAction('Open', Icons.open_in_new_rounded, () { Navigator.pop(context); _openNode(context, ref); }),
+        _SheetAction('Open with', Icons.apps_rounded, () { Navigator.pop(context); _openWith(context); }),
+        _SheetAction('Compress', Icons.folder_zip_rounded, () { Navigator.pop(context); CompressDialog.show(context, node); }),
+        
+        _SheetAction('Copy', Icons.copy_rounded, () { ref.read(fileOperationProvider.notifier).setOperation(FileOpType.copy, explicitNodes: [node]); Navigator.pop(context); }),
+        _SheetAction('Cut', Icons.content_cut_rounded, () { ref.read(fileOperationProvider.notifier).setOperation(FileOpType.cut, explicitNodes: [node]); Navigator.pop(context); }),
+        
+        _SheetAction('Share', Icons.share_rounded, () { Navigator.pop(context); Share.shareXFiles([XFile(node.path)]); }),
+        _SheetAction('Rename', Icons.drive_file_rename_outline_rounded, () { Navigator.pop(context); _showRename(context); }),
+        _SheetAction('Delete', Icons.delete_outline_rounded, () { Navigator.pop(context); _showDeleteConfirm(context, ref); }, isDestructive: true),
+        _SheetAction('Details', Icons.info_outline_rounded, () { Navigator.pop(context); _showDetails(context); }),
+      ];
+    }
+  }
+
+
+
   
   @override
   Widget build(BuildContext context) {
