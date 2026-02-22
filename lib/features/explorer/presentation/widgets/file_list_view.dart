@@ -38,45 +38,68 @@ class FileListView extends ConsumerWidget {
         final node = sorted[index];
         final isSelected = opState.selectedNodes.contains(node);
 
-        return ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          selected: isSelected,
-          selectedTileColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.25),
-          leading: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: isSelected ? theme.colorScheme.primary : theme.colorScheme.surfaceContainerHighest,
-              shape: BoxShape.circle,
-            ),
-            child: isSelected
-                ? Icon(Icons.check_rounded, color: theme.colorScheme.onPrimary)
-                : Icon(node.isFolder ? Icons.folder_rounded : _fileIcon(node.extension), color: node.isFolder ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant),
+        return Dismissible(
+          key: ValueKey(node.path),
+          background: Container(
+            color: theme.colorScheme.primary,
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: const Icon(Icons.info_outline_rounded, color: Colors.white),
           ),
-          title: Text(node.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w500)),
-          subtitle: Text(node.isFolder ? '${node.name} Folder' : _formatBytes(node.size), style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min, 
-            children: [
-              Text(_formatDate(node.modified), style: const TextStyle(fontSize: 12, color: Colors.grey)),
-              if (!opState.isSelectionMode)
-                IconButton(icon: const Icon(Icons.more_vert_rounded, size: 20), onPressed: () => ActionBottomSheet.show(context, node)),
-            ]
+          secondaryBackground: Container(
+            color: theme.colorScheme.error,
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
           ),
-          onLongPress: () {
-            HapticFeedback.mediumImpact();
-            ref.read(fileOperationProvider.notifier).toggleSelection(node);
-          },
-          onTap: () {
-            if (opState.isSelectionMode) {
-              ref.read(fileOperationProvider.notifier).toggleSelection(node);
-            } else if (node.isFolder) {
-              ref.read(directoryProvider.notifier).navigateTo(node.name);
+          confirmDismiss: (direction) async {
+            if (direction == DismissDirection.endToStart) {
+              ActionBottomSheet.showDeleteConfirm(context, ref, node);
             } else {
-              UnifiedViewer.show(context, node);
+              ActionBottomSheet.showDetails(context, node);
             }
+            return false; // Prevent automatic dismissal, let UI logic handle it
           },
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            selected: isSelected,
+            selectedTileColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.25),
+            leading: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: isSelected ? theme.colorScheme.primary : theme.colorScheme.surfaceContainerHighest,
+                shape: BoxShape.circle,
+              ),
+              child: isSelected
+                  ? Icon(Icons.check_rounded, color: theme.colorScheme.onPrimary)
+                  : Icon(node.isFolder ? Icons.folder_rounded : _fileIcon(node.extension), color: node.isFolder ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant),
+            ),
+            title: Text(node.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w500)),
+            subtitle: Text(node.isFolder ? '${node.name} Folder' : _formatBytes(node.size), style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min, 
+              children: [
+                Text(_formatDate(node.modified), style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                if (!opState.isSelectionMode)
+                  IconButton(icon: const Icon(Icons.more_vert_rounded, size: 20), onPressed: () => ActionBottomSheet.show(context, node)),
+              ]
+            ),
+            onLongPress: () {
+              HapticFeedback.mediumImpact();
+              ref.read(fileOperationProvider.notifier).toggleSelection(node);
+            },
+            onTap: () {
+              if (opState.isSelectionMode) {
+                ref.read(fileOperationProvider.notifier).toggleSelection(node);
+              } else if (node.isFolder) {
+                ref.read(directoryProvider.notifier).navigateTo(node.name);
+              } else {
+                UnifiedViewer.show(context, node);
+              }
+            },
+          ),
         );
       },
     );
