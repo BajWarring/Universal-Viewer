@@ -7,6 +7,7 @@ import 'rename_dialog.dart';
 import '../../../archive_engine/presentation/widgets/compress_dialog.dart';
 import '../../../preview_engine/presentation/preview_screen.dart';
 import '../../../../filesystem/application/directory_notifier.dart';
+import 'task_progress_dialog.dart';
 
 class ActionBottomSheet extends ConsumerWidget {
   final OmniNode node;
@@ -76,12 +77,20 @@ class ActionBottomSheet extends ConsumerWidget {
       return [
         _SheetAction('Open', Icons.folder_open_rounded, () { Navigator.pop(context); _openNode(context, ref); }),
         if (isArchive) ...[
-          _SheetAction('Extract Here', Icons.unarchive_rounded, () { Navigator.pop(context); _extractHere(context); }),
-          _SheetAction('Extract To...', Icons.drive_file_move_rounded, () { Navigator.pop(context); _extractTo(context); }),
+          _SheetAction('Extract Here', Icons.unarchive_rounded, () { 
+            Navigator.pop(context); 
+            ref.read(fileOperationProvider.notifier).setOperation(FileOpType.extract, explicitNodes: [node]);
+            ref.read(fileOperationProvider.notifier).executePaste(ref.read(directoryProvider).currentPath);
+            TaskProgressDialog.show(context);
+          }),
+          _SheetAction('Extract To...', Icons.drive_file_move_rounded, () { 
+            ref.read(fileOperationProvider.notifier).setOperation(FileOpType.extract, explicitNodes: [node]);
+            Navigator.pop(context); 
+          }),
         ],
         _SheetAction('Compress', Icons.folder_zip_rounded, () { Navigator.pop(context); CompressDialog.show(context, node); }),
-        _SheetAction('Copy', Icons.copy_rounded, () { ref.read(fileOperationProvider.notifier).setOperation(FileOpType.copy); Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied'))); }),
-        _SheetAction('Cut', Icons.content_cut_rounded, () { ref.read(fileOperationProvider.notifier).setOperation(FileOpType.cut); Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cut'))); }),
+        _SheetAction('Copy', Icons.copy_rounded, () { ref.read(fileOperationProvider.notifier).setOperation(FileOpType.copy, explicitNodes: [node]); Navigator.pop(context); }),
+        _SheetAction('Cut', Icons.content_cut_rounded, () { ref.read(fileOperationProvider.notifier).setOperation(FileOpType.cut, explicitNodes: [node]); Navigator.pop(context); }),
         _SheetAction('Rename', Icons.drive_file_rename_outline_rounded, () { Navigator.pop(context); _showRename(context); }),
         _SheetAction('Delete', Icons.delete_outline_rounded, () { Navigator.pop(context); _showDeleteConfirm(context, ref); }, isDestructive: true),
         _SheetAction('Details', Icons.info_outline_rounded, () { Navigator.pop(context); _showDetails(context); }),
@@ -92,8 +101,8 @@ class ActionBottomSheet extends ConsumerWidget {
         _SheetAction('Open', Icons.open_in_new_rounded, () { Navigator.pop(context); _openNode(context, ref); }),
         _SheetAction('Open with', Icons.apps_rounded, () { Navigator.pop(context); _openWith(context); }),
         _SheetAction('Compress', Icons.folder_zip_rounded, () { Navigator.pop(context); CompressDialog.show(context, node); }),
-        _SheetAction('Copy', Icons.copy_rounded, () { ref.read(fileOperationProvider.notifier).setOperation(FileOpType.copy); Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied'))); }),
-        _SheetAction('Cut', Icons.content_cut_rounded, () { ref.read(fileOperationProvider.notifier).setOperation(FileOpType.cut); Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cut'))); }),
+        _SheetAction('Copy', Icons.copy_rounded, () { ref.read(fileOperationProvider.notifier).setOperation(FileOpType.copy, explicitNodes: [node]); Navigator.pop(context); }),
+        _SheetAction('Cut', Icons.content_cut_rounded, () { ref.read(fileOperationProvider.notifier).setOperation(FileOpType.cut, explicitNodes: [node]); Navigator.pop(context); }),
         _SheetAction('Share', Icons.share_rounded, () { Navigator.pop(context); Share.shareXFiles([XFile(node.path)]); }),
         _SheetAction('Rename', Icons.drive_file_rename_outline_rounded, () { Navigator.pop(context); _showRename(context); }),
         _SheetAction('Delete', Icons.delete_outline_rounded, () { Navigator.pop(context); _showDeleteConfirm(context, ref); }, isDestructive: true),
@@ -111,8 +120,6 @@ class ActionBottomSheet extends ConsumerWidget {
   }
 
   void _openWith(BuildContext context) => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Opening with system apps...')));
-  void _extractHere(BuildContext context) => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Extracting here...')));
-  void _extractTo(BuildContext context) => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Choose destination...')));
   
   void _showRename(BuildContext context) => showModalBottomSheet(context: context, isScrollControlled: true, builder: (_) => Padding(padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom), child: RenameDialog(node: node)));
   
@@ -124,10 +131,10 @@ class ActionBottomSheet extends ConsumerWidget {
         Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel'))),
         const SizedBox(width: 12),
         Expanded(child: FilledButton(onPressed: () async {
-          await ref.read(directoryProvider.notifier).deleteNode(node);
+          ref.read(fileOperationProvider.notifier).executeDelete([node]);
           if (context.mounted) {
             Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${node.name} deleted')));
+            TaskProgressDialog.show(context);
           }
         }, style: FilledButton.styleFrom(backgroundColor: Colors.red), child: const Text('Delete'))),
       ]),
@@ -178,58 +185,6 @@ class _ActionTile extends StatelessWidget {
   final _SheetAction action;
   final ThemeData theme;
   const _ActionTile({required this.action, required this.theme});
-
-
-  
-  List<_SheetAction> _buildActions(BuildContext context, WidgetRef ref) {
-    final isArchive = ['zip','rar','7z','tar','apk'].contains(node.extension.toLowerCase());
-    if (node.isFolder || isArchive) {
-      return [
-        _SheetAction('Open', Icons.folder_open_rounded, () { Navigator.pop(context); _openNode(context, ref); }),
-        if (isArchive) ...[
-          // Extracts in the current folder immediately
-          _SheetAction('Extract Here', Icons.unarchive_rounded, () { 
-            Navigator.pop(context); 
-            ref.read(fileOperationProvider.notifier).setOperation(FileOpType.extract, explicitNodes: [node]);
-            ref.read(fileOperationProvider.notifier).executePaste(ref.read(directoryProvider).currentPath);
-            TaskProgressDialog.show(context);
-          }),
-          // Pops up the OperationBar allowing user to navigate to another folder and hit Paste/Extract
-          _SheetAction('Extract To...', Icons.drive_file_move_rounded, () { 
-            ref.read(fileOperationProvider.notifier).setOperation(FileOpType.extract, explicitNodes: [node]);
-            Navigator.pop(context); 
-          }),
-        ],
-        _SheetAction('Compress', Icons.folder_zip_rounded, () { Navigator.pop(context); CompressDialog.show(context, node); }),
-        
-        // Explicitly pass [node] so single items trigger the bottom Operation Bar
-        _SheetAction('Copy', Icons.copy_rounded, () { ref.read(fileOperationProvider.notifier).setOperation(FileOpType.copy, explicitNodes: [node]); Navigator.pop(context); }),
-        _SheetAction('Cut', Icons.content_cut_rounded, () { ref.read(fileOperationProvider.notifier).setOperation(FileOpType.cut, explicitNodes: [node]); Navigator.pop(context); }),
-        
-        _SheetAction('Rename', Icons.drive_file_rename_outline_rounded, () { Navigator.pop(context); _showRename(context); }),
-        _SheetAction('Delete', Icons.delete_outline_rounded, () { Navigator.pop(context); _showDeleteConfirm(context, ref); }, isDestructive: true),
-        _SheetAction('Details', Icons.info_outline_rounded, () { Navigator.pop(context); _showDetails(context); }),
-        if (!node.isFolder) _SheetAction('Share', Icons.share_rounded, () { Navigator.pop(context); Share.shareXFiles([XFile(node.path)]); }),
-      ];
-    } else {
-      return [
-        _SheetAction('Open', Icons.open_in_new_rounded, () { Navigator.pop(context); _openNode(context, ref); }),
-        _SheetAction('Open with', Icons.apps_rounded, () { Navigator.pop(context); _openWith(context); }),
-        _SheetAction('Compress', Icons.folder_zip_rounded, () { Navigator.pop(context); CompressDialog.show(context, node); }),
-        
-        _SheetAction('Copy', Icons.copy_rounded, () { ref.read(fileOperationProvider.notifier).setOperation(FileOpType.copy, explicitNodes: [node]); Navigator.pop(context); }),
-        _SheetAction('Cut', Icons.content_cut_rounded, () { ref.read(fileOperationProvider.notifier).setOperation(FileOpType.cut, explicitNodes: [node]); Navigator.pop(context); }),
-        
-        _SheetAction('Share', Icons.share_rounded, () { Navigator.pop(context); Share.shareXFiles([XFile(node.path)]); }),
-        _SheetAction('Rename', Icons.drive_file_rename_outline_rounded, () { Navigator.pop(context); _showRename(context); }),
-        _SheetAction('Delete', Icons.delete_outline_rounded, () { Navigator.pop(context); _showDeleteConfirm(context, ref); }, isDestructive: true),
-        _SheetAction('Details', Icons.info_outline_rounded, () { Navigator.pop(context); _showDetails(context); }),
-      ];
-    }
-  }
-
-
-
   
   @override
   Widget build(BuildContext context) {
