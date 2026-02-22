@@ -51,7 +51,7 @@ class FileService {
     receivePort.close();
   }
 
-  // --- ISOLATE ENTRY POINTS --- //
+  // --- ISOLATE ENTRY POINTS ---
 
   static Future<void> _copyTask(List<dynamic> args) async {
     final nodes = args[0] as List<OmniNode>;
@@ -71,7 +71,7 @@ class FileService {
       newPaths.add(newPath);
 
       if (node.isFolder) {
-        Directory(newPath).createSync(recursive: true);
+        _copyDirectorySync(Directory(node.path), Directory(newPath));
       } else {
         File(node.path).copySync(newPath);
       }
@@ -79,6 +79,18 @@ class FileService {
     
     final undo = UndoAction(type: FileOpType.copy, originalPaths: originalPaths, newPaths: newPaths);
     sendPort.send(FileOperationMessage(total, total, 'Finishing...', 1.0, undoAction: undo));
+  }
+
+  static void _copyDirectorySync(Directory source, Directory destination) {
+    destination.createSync(recursive: true);
+    for (var entity in source.listSync(recursive: false)) {
+      if (entity is Directory) {
+        var newDirectory = Directory(p.join(destination.path, p.basename(entity.path)));
+        _copyDirectorySync(entity, newDirectory);
+      } else if (entity is File) {
+        entity.copySync(p.join(destination.path, p.basename(entity.path)));
+      }
+    }
   }
 
   static Future<void> _moveTask(List<dynamic> args) async {
