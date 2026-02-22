@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:isolate';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import '../domain/entities/omni_node.dart';
@@ -15,24 +16,14 @@ class DirectoryState {
     this.pathStack = const [],
   });
 
-  DirectoryState copyWith({
-    AsyncValue<List<OmniNode>>? nodes,
-    String? currentPath,
-    List<String>? pathStack,
-  }) {
-    return DirectoryState(
-      nodes: nodes ?? this.nodes,
-      currentPath: currentPath ?? this.currentPath,
-      pathStack: pathStack ?? this.pathStack,
-    );
+  DirectoryState copyWith({AsyncValue<List<OmniNode>>? nodes, String? currentPath, List<String>? pathStack}) {
+    return DirectoryState(nodes: nodes ?? this.nodes, currentPath: currentPath ?? this.currentPath, pathStack: pathStack ?? this.pathStack);
   }
 }
 
 class DirectoryNotifier extends Notifier<DirectoryState> {
   @override
-  DirectoryState build() {
-    return const DirectoryState();
-  }
+  DirectoryState build() => const DirectoryState();
 
   Future<void> loadDirectory(String path) async {
     state = state.copyWith(nodes: const AsyncValue.loading(), currentPath: path);
@@ -49,28 +40,8 @@ class DirectoryNotifier extends Notifier<DirectoryState> {
         return;
       }
 
-      final List<OmniNode> nodes = [];
-      await for (final entity in dir.list(followLinks: false)) {
-        final stat = await entity.stat();
-        final name = p.basename(entity.path);
-        final isFolder = entity is Directory;
-        
-        nodes.add(OmniNode(
-          name: name,
-          path: entity.path,
-          size: stat.size,
-          modified: stat.modified,
-          isFolder: isFolder,
-          extension: isFolder ? '' : p.extension(name).replaceAll('.', ''),
-        ));
-      }
-
-      // Sort: Folders first, then alphabetical
-      nodes.sort((a, b) {
-        if (a.isFolder && !b.isFolder) return -1;
-        if (!a.isFolder && b.isFolder) return 1;
-        return a.name.toLowerCase().compareTo(b.name.toLowerCase());
-      });
+      // Run folder parsing & item counting in background Isolate for 60fps performance
+      final nodes = await Isolate.run(() => _loadDirectoryIsolate(path));
 
       final newStack = path == StorageService.internalStoragePath || path == StorageService.fallbackSdCardPath 
           ? [path] 
@@ -82,15 +53,46 @@ class DirectoryNotifier extends Notifier<DirectoryState> {
     }
   }
 
-  List<String> _buildStack(String path) {
-    if (!path.startsWith(StorageService.internalStoragePath) && !path.startsWith(StorageService.fallbackSdCardPath)) {
-      return [path];
-    }
+  static Future<List<OmniNode>> _loadDirectoryIsolate(String path) async {
+    final dir = Directory(path);
+    final List<OmniNode> nodes = [];
+    final entities = dir.listSync(followLinks: false);
     
-    final String root = path.startsWith(StorageService.internalStoragePath) 
-        ? StorageService.internalStoragePath 
-        : StorageService.fallbackSdCardPath;
-        
+    for (final entity in entities) {
+      final stat = entity.statSync();
+      final name = p.basename(entity.path);
+      final isFolder = entity is Directory;
+      
+      int? itemCount;
+      if (isFolder) {
+        try {
+          itemCount = (entity as Directory).listSync(followLinks: false).length;
+        } catch (_) { itemCount = 0; }
+      }
+      
+      nodes.add(OmniNode(
+        name: name,
+        path: entity.path,
+        size: stat.size,
+        modified: stat.modified,
+        isFolder: isFolder,
+        extension: isFolder ? '' : p.extension(name).replaceAll('.', ''),
+        itemCount: itemCount,
+      ));
+    }
+
+    nodes.sort((a, b) {
+      if (a.isFolder && !b.isFolder) return -1;
+      if (!a.isFolder && b.isFolder) return 1;
+      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    });
+    
+    return nodes;
+  }
+
+  List<String> _buildStack(String path) {
+    if (!path.startsWith(StorageService.internalStoragePath) && !path.startsWith(StorageService.fallbackSdCardPath)) return [path];
+    final String root = path.startsWith(StorageService.internalStoragePath) ? StorageService.internalStoragePath : StorageService.fallbackSdCardPath;
     final relative = path.replaceFirst(root, '');
     final segments = relative.split('/').where((s) => s.isNotEmpty).toList();
     
@@ -103,27 +105,10 @@ class DirectoryNotifier extends Notifier<DirectoryState> {
     return stack;
   }
 
-  void navigateTo(String folderName) {
-    final newPath = p.join(state.currentPath, folderName);
-    loadDirectory(newPath);
-  }
-
-  void jumpToPath(String path) {
-    loadDirectory(path);
-  }
-
+  void navigateTo(String folderName) => loadDirectory(p.join(state.currentPath, folderName));
+  void jumpToPath(String path) => loadDirectory(path);
   void jumpToIndex(int index) {
-    if (index >= 0 && index < state.pathStack.length) {
-      loadDirectory(state.pathStack[index]);
-    }
-  }
-
-  void navigateUp() {
-    if (state.pathStack.length > 1) {
-      loadDirectory(state.pathStack[state.pathStack.length - 2]);
-    } else {
-      state = const DirectoryState(); // Go to root selector
-    }
+    if (index >= 0 && index < state.pathStack.length) loadDirectory(state.pathStack[index]);
   }
 }
 
