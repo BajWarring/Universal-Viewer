@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../filesystem/application/directory_notifier.dart';
+import '../../../../filesystem/application/storage_service.dart';
 import '../application/file_operation_notifier.dart';
 import 'widgets/explorer_header.dart';
 import 'widgets/file_list_view.dart';
@@ -17,30 +18,6 @@ class ExplorerScreen extends ConsumerWidget {
     final opState = ref.watch(fileOperationProvider);
     final theme = Theme.of(context);
 
-    // Listen to operation completions to trigger the Undo Snackbar
-    ref.listen<FileOperationState>(fileOperationProvider, (previous, next) {
-      if (previous?.taskStatus == TaskStatus.running && next.taskStatus == TaskStatus.success) {
-        if (next.operation != FileOpType.none && next.operation != FileOpType.undo) {
-          final messenger = ScaffoldMessenger.of(context);
-          messenger.hideCurrentSnackBar();
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text('${next.operation.name.toUpperCase()} Completed!'),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              action: next.lastUndoableAction != null 
-                  ? SnackBarAction(
-                      label: 'UNDO', 
-                      textColor: theme.colorScheme.inversePrimary,
-                      onPressed: () => ref.read(fileOperationProvider.notifier).undoLastAction()
-                    )
-                  : null,
-            ),
-          );
-        }
-      }
-    });
-
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       appBar: const ExplorerHeader(),
@@ -48,7 +25,7 @@ class ExplorerScreen extends ConsumerWidget {
         children: [
           dirState.nodes.when(
             data: (nodes) {
-              if (dirState.pathStack.isEmpty) return _buildRootSelector(context, ref, theme);
+              if (dirState.pathStack.isEmpty) return _buildRootSelector(context, theme);
               if (opState.isGridView) return FileGridView(nodes: nodes);
               return FileListView(nodes: nodes);
             },
@@ -61,76 +38,99 @@ class ExplorerScreen extends ConsumerWidget {
                   const SizedBox(height: 16),
                   Text('Error loading files:\n$err', textAlign: TextAlign.center),
                   const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: () => ref.read(directoryProvider.notifier).loadDirectory(dirState.currentPath),
-                    child: const Text('Retry'),
-                  ),
+                  FilledButton(onPressed: () => ref.read(directoryProvider.notifier).loadDirectory(dirState.currentPath), child: const Text('Retry')),
                 ]),
               ),
             ),
           ),
-          const OperationBar(), // Mounts bottom operations (Copy/Cut)
+          const OperationBar(),
         ],
       ),
       floatingActionButton: const DynamicFab(),
     );
   }
 
-  Widget _buildRootSelector(BuildContext context, WidgetRef ref, ThemeData theme) {
-    final drives = [
-      (name: 'Internal Storage', icon: Icons.smartphone_rounded, path: '/storage/emulated/0', used: 0.25, usedStr: '10 GB / 128 GB'),
-      (name: 'SD Card', icon: Icons.sd_card_rounded, path: '/storage/sdcard1', used: 0.60, usedStr: '42 GB / 64 GB'),
-    ];
+  Widget _buildRootSelector(BuildContext context, ThemeData theme) {
+    final drives = StorageService.getStorageRoots();
     return ListView(
       padding: const EdgeInsets.all(16),
-      children: drives.map((drive) => _buildDriveCard(context, ref, theme, drive.name, drive.icon, drive.path, drive.used, drive.usedStr)).toList(),
+      children: drives.map((drive) => _DriveCardAsync(
+        drivePath: drive['path'] as String,
+        driveName: drive['name'] as String,
+        iconData: drive['icon'] == 'smartphone' ? Icons.smartphone_rounded : Icons.sd_card_rounded,
+        theme: theme,
+      )).toList(),
     );
   }
+}
 
-  Widget _buildDriveCard(BuildContext context, WidgetRef ref, ThemeData theme, String name, IconData icon, String path, double used, String usedStr) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: () => ref.read(directoryProvider.notifier).jumpToPath(path),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(children: [
-            SizedBox(
-              width: 60, height: 60,
-              child: Stack(alignment: Alignment.center, children: [
-                CircularProgressIndicator(
-                  value: used,
-                  backgroundColor: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-                  color: theme.colorScheme.primary,
-                  strokeWidth: 3.5,
-                  strokeCap: StrokeCap.round,
+class _DriveCardAsync extends ConsumerWidget {
+  final String drivePath;
+  final String driveName;
+  final IconData iconData;
+  final ThemeData theme;
+
+  const _DriveCardAsync({required this.drivePath, required this.driveName, required this.iconData, required this.theme});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: StorageService.getStorageInfo(drivePath),
+      builder: (context, snapshot) {
+        double usedFraction = 0.0;
+        String freeText = "Calculating...";
+
+        if (snapshot.hasData) {
+          final data = snapshot.data!;
+          usedFraction = data['usedFraction'] as double;
+          freeText = '${StorageService.formatBytes(data['free'] as int)} free';
+        }
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          color: theme.colorScheme.surfaceContainer,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(24),
+            onTap: () => ref.read(directoryProvider.notifier).jumpToPath(drivePath),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(children: [
+                SizedBox(
+                  width: 64, height: 64,
+                  child: Stack(alignment: Alignment.center, children: [
+                    CircularProgressIndicator(
+                      value: snapshot.hasData ? usedFraction : null,
+                      backgroundColor: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                      color: theme.colorScheme.primary,
+                      strokeWidth: 4,
+                      strokeCap: StrokeCap.round,
+                    ),
+                    Icon(iconData, color: theme.colorScheme.primary, size: 28),
+                  ]),
                 ),
-                Icon(icon, color: theme.colorScheme.primary, size: 24),
+                const SizedBox(width: 20),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(driveName, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(freeText, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: theme.colorScheme.onSurfaceVariant)),
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: snapshot.hasData ? usedFraction : null,
+                      minHeight: 6,
+                      backgroundColor: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ])),
               ]),
             ),
-            const SizedBox(width: 20),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              Text(usedStr, style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant)),
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: used,
-                  minHeight: 4,
-                  backgroundColor: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-            ])),
-            const SizedBox(width: 8),
-            Icon(Icons.chevron_right_rounded, color: theme.colorScheme.outlineVariant),
-          ]),
-        ),
-      ),
+          ),
+        );
+      }
     );
   }
 }
