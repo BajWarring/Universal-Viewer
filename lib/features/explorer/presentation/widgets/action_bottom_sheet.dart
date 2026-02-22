@@ -20,13 +20,12 @@ class ActionBottomSheet extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8), // Frosted glass effect
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
         child: ActionBottomSheet(node: node),
       ),
     );
   }
 
-  // --- Static Helpers for Swipe Actions ---
   static void showDeleteConfirm(BuildContext context, WidgetRef ref, OmniNode node) {
     showModalBottomSheet(
       context: context,
@@ -80,6 +79,7 @@ class ActionBottomSheet extends ConsumerWidget {
   }
 
   static Widget _staticDetailRow(String label, String value) => Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Row(children: [Text(label, style: const TextStyle(fontWeight: FontWeight.bold)), const Spacer(), Expanded(child: Text(value, style: const TextStyle(fontSize: 14), textAlign: TextAlign.right, maxLines: 2, overflow: TextOverflow.ellipsis))]));
+  
   static String _staticFormatBytes(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
@@ -176,11 +176,25 @@ class ActionBottomSheet extends ConsumerWidget {
   }
 
   void _openNode(BuildContext context, WidgetRef ref) {
-    if (node.isFolder) ref.read(directoryProvider.notifier).navigateTo(node.name);
-    else UnifiedViewer.show(context, node);
+    if (node.isFolder) {
+      ref.read(directoryProvider.notifier).navigateTo(node.name);
+    } else {
+      UnifiedViewer.show(context, node);
+    }
   }
 
-  void _showRename(BuildContext context) => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (_) => BackdropFilter(filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8), child: Padding(padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom), child: RenameDialog(node: node))));
+  void _showRename(BuildContext context) => showModalBottomSheet(
+    context: context, 
+    isScrollControlled: true, 
+    backgroundColor: Colors.transparent, 
+    builder: (_) => BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8), 
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom), 
+        child: RenameDialog(node: node)
+      )
+    )
+  );
 
   IconData _fileIcon(String ext) {
     switch (ext.toLowerCase()) {
