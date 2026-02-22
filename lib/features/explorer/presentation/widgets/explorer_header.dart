@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../filesystem/application/directory_notifier.dart';
+import '../../../../filesystem/application/storage_service.dart';
 import '../../application/file_operation_notifier.dart';
 import '../../../search/presentation/search_screen.dart';
 
@@ -9,20 +10,6 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
-
-  String _aliasPath(String path) {
-    if (path == '/storage/emulated/0') return 'Internal Storage';
-    if (path.startsWith('/storage/emulated/0/')) return path.replaceFirst('/storage/emulated/0/', 'Internal Storage / ');
-    if (path == '/storage/sdcard1') return 'SD Card';
-    if (path.startsWith('/storage/sdcard1/')) return path.replaceFirst('/storage/sdcard1/', 'SD Card / ');
-    return path;
-  }
-
-  String _aliasFolderName(String name) {
-    if (name == '0') return 'Internal Storage';
-    if (name == 'sdcard1') return 'SD Card';
-    return name;
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -40,8 +27,8 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
     }
 
     final rawFolderName = dirState.pathStack.isEmpty ? 'Storage' : dirState.pathStack.last.split('/').last;
-    final currentFolderName = _aliasFolderName(rawFolderName);
-    final currentPath = dirState.currentPath == 'Root' ? 'Select a drive' : _aliasPath(dirState.currentPath);
+    final currentFolderName = StorageService.getFriendlyFolderName(rawFolderName);
+    final currentPath = dirState.currentPath == 'Root' ? 'Select a drive' : StorageService.getFriendlyPath(dirState.currentPath);
 
     return AppBar(
       title: InkWell(
@@ -75,10 +62,6 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
           icon: Icon(opState.isGridView ? Icons.view_list_rounded : Icons.grid_view_rounded),
           onPressed: () => ref.read(fileOperationProvider.notifier).toggleView(),
         ),
-        IconButton(
-          icon: const Icon(Icons.more_vert_rounded),
-          onPressed: () {}, 
-        ),
       ],
     );
   }
@@ -86,6 +69,7 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
   void _showLocationDropdown(BuildContext context, WidgetRef ref, DirectoryState dirState) {
     final RenderBox renderBox = context.findRenderObject() as RenderBox;
     final offset = renderBox.localToGlobal(Offset.zero);
+    final availableDrives = StorageService.getStorageRoots();
 
     showMenu<dynamic>(
       context: context,
@@ -100,7 +84,7 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
           child: Text('CURRENT PATH', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
         ),
         ...List.generate(dirState.pathStack.length, (index) {
-          final segment = _aliasFolderName(dirState.pathStack[index].split('/').last);
+          final segment = StorageService.getFriendlyFolderName(dirState.pathStack[index].split('/').last);
           final isLast = index == dirState.pathStack.length - 1;
           final icon = index == 0 ? (segment.contains('Internal') ? Icons.smartphone_rounded : Icons.sd_card_rounded) : Icons.folder_open_rounded;
           
@@ -119,16 +103,21 @@ class ExplorerHeader extends ConsumerWidget implements PreferredSizeWidget {
         }),
         const PopupMenuDivider(),
         const PopupMenuItem<String>(
-          value: '/storage/emulated/0',
+          enabled: false,
+          height: 30,
+          child: Text('DRIVES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
+        ),
+        ...availableDrives.map((drive) => PopupMenuItem<String>(
+          value: drive['path'] as String,
           height: 40,
           child: Row(
             children: [
-              Icon(Icons.smartphone_rounded, size: 20, color: Colors.grey),
-              SizedBox(width: 12),
-              Text('Internal Storage', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+              Icon(drive['icon'] == 'smartphone' ? Icons.smartphone_rounded : Icons.sd_card_rounded, size: 20, color: Colors.grey),
+              const SizedBox(width: 12),
+              Text(drive['name'] as String, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
             ],
           ),
-        ),
+        )),
       ],
     ).then((value) {
       if (value is int) {
