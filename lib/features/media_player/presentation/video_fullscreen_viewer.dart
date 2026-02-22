@@ -2,8 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:media_kit_video/media_kit_video.dart';
 import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart' hide VideoState; // Hides conflict
 import '../../../../filesystem/domain/entities/omni_node.dart';
 import '../application/video_notifier.dart';
 
@@ -32,12 +32,10 @@ class _VideoFullscreenViewerState extends ConsumerState<VideoFullscreenViewer> {
   bool _showControls = true;
   Timer? _hideControlsTimer;
   
-  // Gesture UI Feedback State
   String? _overlayIcon;
   String? _overlayText;
   Timer? _overlayTimer;
   
-  // Drag State
   double _dragVolume = 1.0; 
   double _dragBrightness = 1.0;
   Duration? _scrubTarget;
@@ -92,7 +90,6 @@ class _VideoFullscreenViewerState extends ConsumerState<VideoFullscreenViewer> {
     });
   }
 
-  // --- MX/VLC Style Gestures ---
   void _onDoubleTapDown(TapDownDetails details) {
     if (ref.read(videoProvider).isLocked) return;
     final width = MediaQuery.of(context).size.width;
@@ -118,13 +115,10 @@ class _VideoFullscreenViewerState extends ConsumerState<VideoFullscreenViewer> {
     final delta = -details.primaryDelta! / 200.0; 
     
     if (details.globalPosition.dx > width / 2) {
-      // Right side: Volume
       _dragVolume = (_dragVolume + delta).clamp(0.0, 1.0);
       ref.read(videoProvider.notifier).setVolume(_dragVolume);
       _showFeedback("${(_dragVolume * 100).toInt()}%", "volume");
     } else {
-      // Left side: Brightness (Requires screen_brightness package for real hardware brightness)
-      // Mocked for UI parity
       _dragBrightness = (_dragBrightness + delta).clamp(0.0, 1.0);
       _showFeedback("${(_dragBrightness * 100).toInt()}%", "brightness");
     }
@@ -141,7 +135,7 @@ class _VideoFullscreenViewerState extends ConsumerState<VideoFullscreenViewer> {
   void _onHorizontalDragUpdate(DragUpdateDetails details) {
     if (!_isScrubbing) return;
     final state = ref.read(videoProvider);
-    final delta = details.primaryDelta! * 2000; // ms per pixel sweep
+    final delta = details.primaryDelta! * 2000; 
     _scrubTarget = Duration(milliseconds: (_scrubTarget!.inMilliseconds + delta.toInt()).clamp(0, state.duration.inMilliseconds));
     _showFeedback(_formatTime(_scrubTarget!), "seek");
   }
@@ -165,14 +159,12 @@ class _VideoFullscreenViewerState extends ConsumerState<VideoFullscreenViewer> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. MPV Video Surface
           Center(
             child: ctrl != null 
-              ? Video(controller: ctrl, controls: NoVideoControls) // Disable default media_kit controls
+              ? Video(controller: ctrl, controls: NoVideoControls) 
               : const CircularProgressIndicator(color: Colors.white),
           ),
           
-          // 2. Gesture Layer
           GestureDetector(
             onTap: _toggleControls,
             onDoubleTapDown: _onDoubleTapDown,
@@ -194,14 +186,13 @@ class _VideoFullscreenViewerState extends ConsumerState<VideoFullscreenViewer> {
             child: const SizedBox.expand(),
           ),
 
-          // 3. Gesture Feedback Overlay
           if (_overlayText != null)
             Align(
               alignment: Alignment.center,
               child: IgnorePointer(
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), borderRadius: BorderRadius.circular(16)),
+                  decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(16)),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -216,7 +207,6 @@ class _VideoFullscreenViewerState extends ConsumerState<VideoFullscreenViewer> {
               ),
             ),
 
-          // 4. Locked Indicator
           if (videoState.isLocked)
             Positioned(
               top: 32, left: 0, right: 0,
@@ -238,7 +228,6 @@ class _VideoFullscreenViewerState extends ConsumerState<VideoFullscreenViewer> {
               ),
             ),
 
-          // 5. Controls Overlay
           if (_showControls || _isScrubbing)
             Positioned.fill(
               child: AnimatedOpacity(
@@ -246,7 +235,6 @@ class _VideoFullscreenViewerState extends ConsumerState<VideoFullscreenViewer> {
                 duration: const Duration(milliseconds: 220),
                 child: Column(
                   children: [
-                    // Top Bar
                     if (!videoState.isLocked)
                       Container(
                         padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 16, bottom: 32, left: 16, right: 16),
@@ -265,7 +253,6 @@ class _VideoFullscreenViewerState extends ConsumerState<VideoFullscreenViewer> {
                     
                     const Spacer(),
 
-                    // Center Controls
                     if (!videoState.isLocked && !_isScrubbing)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -292,14 +279,12 @@ class _VideoFullscreenViewerState extends ConsumerState<VideoFullscreenViewer> {
 
                     const Spacer(),
 
-                    // Bottom Bar
                     Container(
                       padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 16, top: 32, left: 24, right: 24),
                       decoration: const BoxDecoration(gradient: LinearGradient(begin: Alignment.bottomCenter, end: Alignment.topCenter, colors: [Colors.black87, Colors.transparent])),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Progress Slider
                           if (!videoState.isLocked)
                             Row(
                               children: [
@@ -327,7 +312,6 @@ class _VideoFullscreenViewerState extends ConsumerState<VideoFullscreenViewer> {
                               ],
                             ),
                           const SizedBox(height: 8),
-                          // Utility Buttons
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -335,7 +319,7 @@ class _VideoFullscreenViewerState extends ConsumerState<VideoFullscreenViewer> {
                                 icon: Icon(videoState.isLocked ? Icons.lock_rounded : Icons.lock_open_rounded, color: Colors.white),
                                 onPressed: () {
                                   ref.read(videoProvider.notifier).toggleLock();
-                                  if (!videoState.isLocked) setState(() => _showControls = false); // Hides if newly locked
+                                  if (!videoState.isLocked) setState(() => _showControls = false); 
                                   _showFeedback(videoState.isLocked ? "Unlocked" : "Locked", null);
                                 },
                               ),
@@ -344,7 +328,7 @@ class _VideoFullscreenViewerState extends ConsumerState<VideoFullscreenViewer> {
                                   children: [
                                     IconButton(
                                       icon: const Icon(Icons.picture_in_picture_alt_rounded, color: Colors.white),
-                                      onPressed: () { /* Future PIP implementation */ },
+                                      onPressed: () { },
                                     ),
                                     TextButton(
                                       onPressed: () => _showSpeedOptions(context, ref),
@@ -366,8 +350,6 @@ class _VideoFullscreenViewerState extends ConsumerState<VideoFullscreenViewer> {
     );
   }
 
-  // --- Menus ---
-
   void _showAudioTracks(BuildContext context, VideoState state) {
     _startHideTimer();
     showModalBottomSheet(
@@ -380,7 +362,7 @@ class _VideoFullscreenViewerState extends ConsumerState<VideoFullscreenViewer> {
             const Padding(padding: EdgeInsets.all(16), child: Text("Audio Tracks", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
             ...state.audioTracks.map((t) => ListTile(
               leading: Icon(state.selectedAudioTrack == t ? Icons.radio_button_checked : Icons.radio_button_off, color: state.selectedAudioTrack == t ? Theme.of(context).colorScheme.primary : Colors.grey),
-              title: Text(t.title ?? t.language ?? 'Track ${t.id}'),
+              title: Text(t.title ?? t.language ?? t.id ?? 'Unknown Track'),
               onTap: () { ref.read(videoProvider.notifier).setAudioTrack(t); Navigator.pop(context); },
             ))
           ],
@@ -401,7 +383,7 @@ class _VideoFullscreenViewerState extends ConsumerState<VideoFullscreenViewer> {
             const Padding(padding: EdgeInsets.all(16), child: Text("Subtitles", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
             ...state.subtitleTracks.map((t) => ListTile(
               leading: Icon(state.selectedSubtitleTrack == t ? Icons.radio_button_checked : Icons.radio_button_off, color: state.selectedSubtitleTrack == t ? Theme.of(context).colorScheme.primary : Colors.grey),
-              title: Text(t.title ?? t.language ?? 'Track ${t.id}'),
+              title: Text(t.title ?? t.language ?? t.id ?? 'Unknown Track'),
               onTap: () { ref.read(videoProvider.notifier).setSubtitleTrack(t); Navigator.pop(context); },
             ))
           ],
@@ -416,7 +398,6 @@ class _VideoFullscreenViewerState extends ConsumerState<VideoFullscreenViewer> {
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
       onSelected: (value) {
         _startHideTimer();
-        // Decode logic/filters to be expanded
       },
       itemBuilder: (context) => [
         const PopupMenuItem(value: 'hw', child: ListTile(leading: Icon(Icons.memory_rounded), title: Text('HW Decoder: Auto'), contentPadding: EdgeInsets.zero, dense: true)),
