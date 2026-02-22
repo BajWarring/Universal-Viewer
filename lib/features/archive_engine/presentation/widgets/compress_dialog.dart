@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../filesystem/domain/entities/omni_node.dart';
 import '../../application/archive_service.dart';
 import '../../../explorer/application/file_operation_notifier.dart';
-import '../../../explorer/presentation/widgets/task_progress_dialog.dart';
+import '../../../../shared/widgets/task_progress_dialog.dart';
 
 class CompressDialog extends ConsumerStatefulWidget {
   final OmniNode sourceNode;
