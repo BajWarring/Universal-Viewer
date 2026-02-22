@@ -1,164 +1,195 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:video_player/video_player.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import '../../../../filesystem/domain/entities/omni_node.dart';
 
 class VideoState {
   final OmniNode? currentVideo;
-  final VideoPlayerController? controller;
+  final Player? player;
+  final VideoController? controller;
   final bool isPlaying;
   final Duration position;
   final Duration duration;
+  final bool isBuffering;
   
   // Advanced State
   final bool isLocked;
   final double playbackSpeed;
-  final DateTime? sleepTimerEnd;
+  final bool isSpeedBoosted; // For Reddit-style long press 2x speed
+  
+  // Tracks
+  final Track? selectedAudioTrack;
+  final Track? selectedSubtitleTrack;
+  final List<Track> audioTracks;
+  final List<Track> subtitleTracks;
 
   const VideoState({
     this.currentVideo,
+    this.player,
     this.controller,
     this.isPlaying = false,
     this.position = Duration.zero,
     this.duration = Duration.zero,
+    this.isBuffering = false,
     this.isLocked = false,
     this.playbackSpeed = 1.0,
-    this.sleepTimerEnd,
+    this.isSpeedBoosted = false,
+    this.selectedAudioTrack,
+    this.selectedSubtitleTrack,
+    this.audioTracks = const [],
+    this.subtitleTracks = const [],
   });
 
   VideoState copyWith({
     OmniNode? currentVideo,
-    VideoPlayerController? controller,
+    Player? player,
+    VideoController? controller,
     bool? isPlaying,
     Duration? position,
     Duration? duration,
+    bool? isBuffering,
     bool? isLocked,
     double? playbackSpeed,
-    DateTime? sleepTimerEnd,
+    bool? isSpeedBoosted,
+    Track? selectedAudioTrack,
+    Track? selectedSubtitleTrack,
+    List<Track>? audioTracks,
+    List<Track>? subtitleTracks,
   }) {
     return VideoState(
       currentVideo: currentVideo ?? this.currentVideo,
+      player: player ?? this.player,
       controller: controller ?? this.controller,
       isPlaying: isPlaying ?? this.isPlaying,
       position: position ?? this.position,
       duration: duration ?? this.duration,
+      isBuffering: isBuffering ?? this.isBuffering,
       isLocked: isLocked ?? this.isLocked,
       playbackSpeed: playbackSpeed ?? this.playbackSpeed,
-      // If we pass a specific null intentionally to clear it, we'd need a different pattern. 
-      // For simplicity, we manage sleep timer nulling via explicit methods.
-      sleepTimerEnd: sleepTimerEnd ?? this.sleepTimerEnd,
-    );
-  }
-  
-  // Helper to clear sleep timer
-  VideoState clearSleepTimer() {
-    return VideoState(
-      currentVideo: currentVideo,
-      controller: controller,
-      isPlaying: isPlaying,
-      position: position,
-      duration: duration,
-      isLocked: isLocked,
-      playbackSpeed: playbackSpeed,
-      sleepTimerEnd: null,
+      isSpeedBoosted: isSpeedBoosted ?? this.isSpeedBoosted,
+      selectedAudioTrack: selectedAudioTrack ?? this.selectedAudioTrack,
+      selectedSubtitleTrack: selectedSubtitleTrack ?? this.selectedSubtitleTrack,
+      audioTracks: audioTracks ?? this.audioTracks,
+      subtitleTracks: subtitleTracks ?? this.subtitleTracks,
     );
   }
 }
 
 class VideoNotifier extends Notifier<VideoState> {
-  Timer? _sleepTimer;
+  final List<StreamSubscription> _subscriptions = [];
 
   @override
   VideoState build() {
     ref.onDispose(() {
-      state.controller?.dispose();
-      _sleepTimer?.cancel();
+      _disposePlayer();
     });
     return const VideoState();
   }
 
+  void _disposePlayer() {
+    for (final sub in _subscriptions) {
+      sub.cancel();
+    }
+    _subscriptions.clear();
+    state.player?.dispose();
+  }
+
   Future<void> playFile(OmniNode node) async {
-    if (state.currentVideo?.path == node.path && state.controller != null) {
-      state.controller!.play();
+    if (state.currentVideo?.path == node.path && state.player != null) {
+      state.player!.play();
       return;
     }
 
-    final oldController = state.controller;
-    final newController = VideoPlayerController.file(File(node.path));
+    _disposePlayer();
 
-    state = state.copyWith(currentVideo: node, controller: newController, isLocked: false, playbackSpeed: 1.0);
-    
-    await newController.initialize();
-    
-    newController.addListener(_onVideoEvent);
-    newController.play();
-    
-    oldController?.removeListener(_onVideoEvent);
-    oldController?.dispose();
-  }
+    // Initialize MPV Player with Hardware Acceleration
+    final player = Player(configuration: const PlayerConfiguration(
+      pitch: false, 
+      title: 'Omni Media Engine',
+      bufferSize: 32 * 1024 * 1024, // 32MB buffer
+    ));
+    final controller = VideoController(player);
 
-  void _onVideoEvent() {
-    final ctrl = state.controller;
-    if (ctrl == null) return;
     state = state.copyWith(
-      isPlaying: ctrl.value.isPlaying,
-      position: ctrl.value.position,
-      duration: ctrl.value.duration,
+      currentVideo: node, 
+      player: player, 
+      controller: controller,
+      isLocked: false, 
+      playbackSpeed: 1.0,
+      isSpeedBoosted: false,
     );
+    
+    // Listen to MPV Streams
+    _subscriptions.addAll([
+      player.stream.playing.listen((playing) => state = state.copyWith(isPlaying: playing)),
+      player.stream.position.listen((pos) => state = state.copyWith(position: pos)),
+      player.stream.duration.listen((dur) => state = state.copyWith(duration: dur)),
+      player.stream.buffering.listen((buf) => state = state.copyWith(isBuffering: buf)),
+      player.stream.tracks.listen((tracks) {
+        state = state.copyWith(
+          audioTracks: tracks.audio,
+          subtitleTracks: tracks.subtitle,
+        );
+      }),
+      player.stream.track.listen((track) {
+        state = state.copyWith(
+          selectedAudioTrack: track.audio,
+          selectedSubtitleTrack: track.subtitle,
+        );
+      }),
+    ]);
+
+    await player.open(Media(node.path));
+    player.play();
   }
 
   void togglePlayPause() {
-    final ctrl = state.controller;
-    if (ctrl == null) return;
-    if (ctrl.value.isPlaying) {
-      ctrl.pause();
-    } else {
-      ctrl.play();
-    }
+    state.player?.playOrPause();
   }
 
   void seek(Duration position) {
-    state.controller?.seekTo(position);
+    state.player?.seek(position);
   }
 
   void seekRelative(Duration delta) {
-    final ctrl = state.controller;
-    if (ctrl == null) return;
-    final newPos = ctrl.value.position + delta;
-    ctrl.seekTo(newPos);
+    final current = state.player?.state.position ?? Duration.zero;
+    state.player?.seek(current + delta);
   }
 
   void setPlaybackSpeed(double speed) {
-    state.controller?.setPlaybackSpeed(speed);
-    state = state.copyWith(playbackSpeed: speed);
+    state.player?.setRate(speed);
+    state = state.copyWith(playbackSpeed: speed, isSpeedBoosted: false);
+  }
+
+  void setSpeedBoost(bool active) {
+    if (active) {
+      state.player?.setRate(2.0);
+      state = state.copyWith(isSpeedBoosted: true);
+    } else {
+      state.player?.setRate(state.playbackSpeed);
+      state = state.copyWith(isSpeedBoosted: false);
+    }
   }
 
   void toggleLock() {
     state = state.copyWith(isLocked: !state.isLocked);
   }
 
-  void setSleepTimer(int minutes) {
-    _sleepTimer?.cancel();
-    if (minutes <= 0) {
-      state = state.clearSleepTimer();
-      return;
-    }
-    
-    final end = DateTime.now().add(Duration(minutes: minutes));
-    state = state.copyWith(sleepTimerEnd: end);
-    
-    _sleepTimer = Timer(Duration(minutes: minutes), () {
-      state.controller?.pause();
-      state = state.clearSleepTimer();
-    });
+  void setVolume(double volume) {
+    state.player?.setVolume(volume * 100);
+  }
+
+  void setAudioTrack(Track track) {
+    state.player?.setAudioTrack(track);
+  }
+
+  void setSubtitleTrack(Track track) {
+    state.player?.setSubtitleTrack(track);
   }
 
   void stopAndDismiss() {
-    state.controller?.pause();
-    state.controller?.removeListener(_onVideoEvent);
-    state.controller?.dispose();
-    _sleepTimer?.cancel();
+    _disposePlayer();
     state = const VideoState(); 
   }
 }
